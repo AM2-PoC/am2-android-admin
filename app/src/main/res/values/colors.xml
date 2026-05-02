@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="polri_black">#111111</color>
+    <color name="polri_navy">#001d3d</color>
+    <color name="polri_blue">#003566</color>
+    <color name="polri_gold">#ffc300</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background_light">#F8F9FA</color>
+    <color name="text_muted">#6c757d</color>
+    <color name="success_green">#198754</color>
+
+    <color name="colorPrimary">@color/polri_black</color>
+    <color name="colorPrimaryDark">@color/polri_black</color>
+    <color name="colorAccent">@color/polri_gold</color>
+</resources>

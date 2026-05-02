@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@drawable/ic_dashboard"
+            android:title="Dashboard" />
+        <item
+            android:id="@+id/nav_personnel"
+            android:icon="@drawable/ic_people"
+            android:title="Personel" />
+        <item
+            android:id="@+id/nav_channels"
+            android:icon="@drawable/ic_broadcast"
+            android:title="Channels" />
+        <item
+            android:id="@+id/nav_access"
+            android:icon="@drawable/ic_key"
+            android:title="Akses Channel" />
+    </group>
+
+    <item android:title="Monitoring">
+        <menu>
+            <item
+                android:id="@+id/nav_livetrack"
+                android:icon="@drawable/ic_map"
+                android:title="Live Track" />
+            <item
+                android:id="@+id/nav_logs"
+                android:icon="@drawable/ic_history"
+                android:title="Aktivitas Log" />
+        </menu>
+    </item>
+
+    <item android:title="Administrator" android:id="@+id/group_admin">
+        <menu>
+            <item
+                android:id="@+id/nav_admin_panel"
+                android:icon="@drawable/ic_user"
+                android:title="Admin Panel"
+                android:visible="false" />
+        </menu>
+    </item>
+
+    <item android:title="Sistem">
+        <menu>
+            <item
+                android:id="@+id/nav_settings"
+                android:icon="@drawable/ic_settings"
+                android:title="Pengaturan" />
+            <item
+                android:id="@+id/nav_logout"
+                android:icon="@drawable/ic_logout"
+                android:title="Keluar" />
+        </menu>
+    </item>
+</menu>
