@@ -66,7 +66,7 @@ class SettingsActivity : BaseActivity() {
         }
 
         binding.btnExportDb.setOnClickListener {
-            val url = "https://bpbd.poc-id.my.id/WebAdmin/api_settings.php?action=export_db&admin_id=${sessionManager.getAdminId()}&role=${sessionManager.getRole()}"
+            val url = "https://webadmin.am2-poc.com/api_settings.php?action=export_db&admin_id=${sessionManager.getAdminId()}&role=${sessionManager.getRole()}"
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             startActivity(intent)
         }

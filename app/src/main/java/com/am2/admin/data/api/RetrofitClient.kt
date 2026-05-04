@@ -15,8 +15,7 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 object RetrofitClient {
-    // Pastikan tidak ada spasi atau karakter aneh di akhir string ini
-    private const val BASE_URL = "https://global.poc-id.my.id/"
+    private const val BASE_URL = "https://webadmin.am2-poc.com/"
 
     private val cookieJar = object : CookieJar {
         private val cookieStore = HashMap<String, List<Cookie>>()
