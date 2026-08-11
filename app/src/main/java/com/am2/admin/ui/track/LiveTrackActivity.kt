@@ -1,5 +1,7 @@
 package com.am2.admin.ui.track
 
+import com.am2.admin.logging.SafeLog
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
@@ -99,7 +101,7 @@ class LiveTrackActivity : BaseActivity() {
                     binding.tvTxIndicator.visibility = if (isAnySpeaking) View.VISIBLE else View.GONE
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
