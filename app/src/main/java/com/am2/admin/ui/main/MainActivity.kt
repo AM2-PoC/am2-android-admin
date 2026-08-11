@@ -1,8 +1,9 @@
 package com.am2.admin.ui.main
 
+import com.am2.admin.logging.SafeLog
+
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -45,7 +46,7 @@ class MainActivity : BaseActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Stats Error: ${e.message}")
+                SafeLog.e("MainActivity", "Stats Error: ${e.message}")
             }
         }
     }
@@ -63,7 +64,7 @@ class MainActivity : BaseActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Chart Error: ${e.message}")
+                SafeLog.e("MainActivity", "Chart Error: ${e.message}")
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.am2.admin.ui.users
 
+import com.am2.admin.logging.SafeLog
+
 import android.os.Bundle
 import android.text.InputType
 import android.text.method.PasswordTransformationMethod
@@ -70,7 +72,7 @@ class UsersActivity : BaseActivity() {
                     allChannels = response.body()?.distinctBy { it.id } ?: emptyList()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }

@@ -1,6 +1,5 @@
 package com.am2.admin.data.api
 
-import com.am2.admin.BuildConfig
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -26,12 +25,9 @@ object RetrofitClient {
         }
     }
 
+    // Never log HTTP headers or bodies: admin sessions use credential-bearing cookies.
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = if (BuildConfig.DEBUG) {
-            HttpLoggingInterceptor.Level.BODY
-        } else {
-            HttpLoggingInterceptor.Level.NONE
-        }
+        level = HttpLoggingInterceptor.Level.NONE
     }
 
     private val client = OkHttpClient.Builder()

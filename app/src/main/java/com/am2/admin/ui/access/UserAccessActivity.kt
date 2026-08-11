@@ -1,5 +1,7 @@
 package com.am2.admin.ui.access
 
+import com.am2.admin.logging.SafeLog
+
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -83,7 +85,7 @@ class UserAccessActivity : BaseActivity() {
                     response.body()?.let { adapter.updateData(it) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -100,7 +102,7 @@ class UserAccessActivity : BaseActivity() {
                     allChannels = response.body()?.distinctBy { it.id } ?: emptyList()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -163,7 +165,7 @@ class UserAccessActivity : BaseActivity() {
                     Toast.makeText(this@UserAccessActivity, msg, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
                 Toast.makeText(this@UserAccessActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -185,7 +187,7 @@ class UserAccessActivity : BaseActivity() {
                             fetchUserAccess()
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        SafeLog.e("Exception", "Operation failed", e)
                     }
                 }
             }

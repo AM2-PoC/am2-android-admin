@@ -1,5 +1,7 @@
 package com.am2.admin.ui.admin
 
+import com.am2.admin.logging.SafeLog
+
 import android.app.DatePickerDialog
 import android.os.Bundle
 import android.widget.CheckBox
@@ -61,7 +63,7 @@ class AdminPanelActivity : BaseActivity() {
                     response.body()?.let { adminAdapter.updateData(it) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -78,7 +80,7 @@ class AdminPanelActivity : BaseActivity() {
                     allChannels = response.body() ?: emptyList()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -146,7 +148,7 @@ class AdminPanelActivity : BaseActivity() {
                     fetchAdmins()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -195,7 +197,7 @@ class AdminPanelActivity : BaseActivity() {
                     Toast.makeText(this@AdminPanelActivity, "Delegasi diperbarui", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
@@ -210,7 +212,7 @@ class AdminPanelActivity : BaseActivity() {
                         RetrofitClient.instance.deleteAdmin(id = admin.id)
                         fetchAdmins()
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        SafeLog.e("Exception", "Operation failed", e)
                     }
                 }
             }
