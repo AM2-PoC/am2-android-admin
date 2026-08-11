@@ -1,5 +1,7 @@
 package com.am2.admin.ui.settings
 
+import com.am2.admin.logging.SafeLog
+
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
@@ -154,7 +156,7 @@ class SettingsActivity : BaseActivity() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                SafeLog.e("Exception", "Operation failed", e)
             }
         }
     }
