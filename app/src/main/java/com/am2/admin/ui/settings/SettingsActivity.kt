@@ -40,7 +40,10 @@ class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private val currentVersion: String get() = BuildConfig.VERSION_NAME
-    private val updateClient = OkHttpClient()
+    private val updateClient = OkHttpClient.Builder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -139,7 +142,7 @@ class SettingsActivity : BaseActivity() {
                         throw IllegalStateException("identitas APK tidak valid")
                     }
                 }
-                installUpdate(destination)
+                showVerifiedInstallDialog(destination, metadata, installedVersionCode())
             } catch (e: Exception) {
                 destination.delete()
                 Toast.makeText(this@SettingsActivity, "Update ditolak: ${e.message}", Toast.LENGTH_LONG).show()
@@ -147,7 +150,28 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
+    private fun showVerifiedInstallDialog(file: File, metadata: UpdateMetadata, installedVersionCode: Long) {
+        AlertDialog.Builder(this)
+            .setTitle("Pasang Pembaruan")
+            .setMessage("Update v${metadata.versionName} sudah diverifikasi. Pasang sekarang?")
+            .setPositiveButton("Pasang") { _, _ ->
+                if (UpdateVerifier.verify(file, metadata, installedVersionCode, packageManager)) {
+                    installUpdate(file)
+                } else {
+                    Toast.makeText(this, "APK berubah atau tidak valid", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Nanti", null)
+            .show()
+    }
+
     private fun installUpdate(file: File) {
+        val updateRoot = File(filesDir, "updates").canonicalPath + File.separator
+        if (!file.isFile || !file.canonicalPath.startsWith(updateRoot)) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+            return
+        }
         val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
         startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
             data = uri
