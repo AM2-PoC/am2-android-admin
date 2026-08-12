@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.View
@@ -13,15 +14,23 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import com.am2.admin.BuildConfig
 import com.am2.admin.R
 import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.data.pref.SessionManager
 import com.am2.admin.databinding.ActivitySettingsBinding
 import com.am2.admin.ui.BaseActivity
+import com.am2.admin.update.UpdateMetadata
+import com.am2.admin.update.UpdateVerifier
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
@@ -30,7 +39,8 @@ import java.io.FileOutputStream
 class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
-    private val currentVersion = "1.0.0" // Versi aplikasi saat ini
+    private val currentVersion: String get() = BuildConfig.VERSION_NAME
+    private val updateClient = OkHttpClient()
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -86,41 +96,69 @@ class SettingsActivity : BaseActivity() {
 
     private fun checkUpdate() {
         Toast.makeText(this, "Memeriksa pembaruan...", Toast.LENGTH_SHORT).show()
-        
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.instance.checkAppUpdate()
-                if (response.isSuccessful) {
-                    val updateInfo = response.body()
-                    if (updateInfo != null) {
-                        val latestVersion = updateInfo.latest_version
-                        // Sederhana: jika string versi tidak sama, anggap ada update
-                        // (Bisa dikembangkan dengan pembandingan versi yang lebih kompleks)
-                        if (latestVersion != currentVersion) {
-                            showUpdateDialog(latestVersion, updateInfo.download_url, updateInfo.changelog)
-                        } else {
-                            Toast.makeText(this@SettingsActivity, "Aplikasi sudah versi terbaru", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                val info = response.body()
+                if (!response.isSuccessful || info == null) throw IllegalStateException("metadata update tidak tersedia")
+                val metadata = UpdateMetadata.from(info)
+                if (metadata.versionCode <= installedVersionCode()) {
+                    Toast.makeText(this@SettingsActivity, "Aplikasi sudah versi terbaru", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@SettingsActivity, "Gagal terhubung ke server update", Toast.LENGTH_SHORT).show()
+                    showUpdateDialog(metadata)
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@SettingsActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SettingsActivity, "Update ditolak: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    private fun showUpdateDialog(newVersion: String, downloadUrl: String, changelog: String) {
+    private fun showUpdateDialog(metadata: UpdateMetadata) {
         AlertDialog.Builder(this)
-            .setTitle("Pembaruan Tersedia (v$newVersion)")
-            .setMessage("Apa yang baru:\n$changelog\n\nApakah Anda ingin mengunduh sekarang?")
-            .setPositiveButton("Download") { _, _ ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                startActivity(intent)
-            }
+            .setTitle("Pembaruan Tersedia (v${metadata.versionName})")
+            .setMessage("Apa yang baru:\n${metadata.changelog}\n\nUnduh dan verifikasi sekarang?")
+            .setPositiveButton("Unduh") { _, _ -> downloadUpdate(metadata) }
             .setNegativeButton("Nanti", null)
             .show()
+    }
+
+    private fun downloadUpdate(metadata: UpdateMetadata) {
+        lifecycleScope.launch {
+            val destination = File(filesDir, "updates/admin-${metadata.versionCode}.apk")
+            try {
+                withContext(Dispatchers.IO) {
+                    destination.parentFile?.mkdirs()
+                    destination.delete()
+                    val request = Request.Builder().url(metadata.updateUrl).build()
+                    updateClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) throw IllegalStateException("download gagal (${response.code})")
+                        val body = response.body ?: throw IllegalStateException("APK kosong")
+                        destination.outputStream().use { output -> body.byteStream().copyTo(output) }
+                    }
+                    if (!UpdateVerifier.verify(destination, metadata, installedVersionCode(), packageManager)) {
+                        throw IllegalStateException("identitas APK tidak valid")
+                    }
+                }
+                installUpdate(destination)
+            } catch (e: Exception) {
+                destination.delete()
+                Toast.makeText(this@SettingsActivity, "Update ditolak: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun installUpdate(file: File) {
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+            data = uri
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        })
+    }
+
+    private fun installedVersionCode(): Long {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode
+        else @Suppress("DEPRECATION") info.versionCode.toLong()
     }
 
     private fun fetchSettings() {
