@@ -30,15 +30,13 @@ checks = {
         "usesCleartextTraffic=\"false\"",
         "FileProvider",
     ],
-    ".github/workflows/release-candidate.yml": [
+    ".github/workflows/android-ci.yml": [
         "workflow_dispatch",
-        "environment: android-release",
-        "AM2_ADMIN_KEYSTORE_BASE64",
+        "assembleProductionRelease",
         'apksigner" verify',
-        '"$ANDROID_HOME/build-tools/35.0.0/zipalign"',
-        "signer_sha256",
+        "signer-metadata.txt",
         "source_commit",
-        "if: ${{ always() }}",
+        "retention-days: 3",
     ],
 }
 
