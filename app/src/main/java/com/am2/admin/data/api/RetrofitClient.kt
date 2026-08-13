@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://webadmin.am2-poc.com/"
+    private val BASE_URL = com.am2.admin.BuildConfig.BASE_URL
 
     private val cookieJar = object : CookieJar {
         private val cookieStore = HashMap<String, List<Cookie>>()

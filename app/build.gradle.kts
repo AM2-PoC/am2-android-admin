@@ -1,6 +1,20 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+}
+
+fun quotedBuildConfig(value: String): String = "\"$value\""
+
+fun validateEndpoint(environment: String, value: String, host: String): String {
+    val uri = URI(value)
+    require(uri.scheme == "https") { "$environment endpoint must use https" }
+    require(uri.host == host) { "$environment endpoint must use $host" }
+    require(uri.userInfo == null && uri.query == null && uri.fragment == null) {
+        "$environment endpoint must not contain userinfo, query, or fragment"
+    }
+    return value
 }
 
 android {
@@ -17,6 +31,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
         buildConfigField("String", "APPROVED_UPDATE_SIGNER_SHA256", "\"${approvedSigner.get()}\"")
+        buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "false")
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "am² Admin DEV")
+            buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("dev", "https://dev-webadmin.am2-poc.com/", "dev-webadmin.am2-poc.com")))
+            buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("dev", "https://dev-webadmin.am2-poc.com/update/admin.apk", "dev-webadmin.am2-poc.com")))
+        }
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            resValue("string", "app_name", "am² Admin STAGING")
+            buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/", "staging-webadmin.am2-poc.com")))
+            buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/update/admin.apk", "staging-webadmin.am2-poc.com")))
+        }
+        create("production") {
+            dimension = "environment"
+            buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
+            buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/", "webadmin.am2-poc.com")))
+            buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/update/admin.apk", "webadmin.am2-poc.com")))
+        }
     }
 
     buildTypes {

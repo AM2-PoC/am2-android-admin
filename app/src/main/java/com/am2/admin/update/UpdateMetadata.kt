@@ -11,7 +11,7 @@ data class UpdateMetadata(
     val changelog: String
 ) {
     companion object {
-        const val APPROVED_URL = "https://webadmin.am2-poc.com/update/admin.apk"
+        val APPROVED_URL: String = com.am2.admin.BuildConfig.UPDATE_APK_URL
         private val DIGEST = Regex("^[0-9a-f]{64}$")
 
         fun from(info: UpdateInfo): UpdateMetadata {

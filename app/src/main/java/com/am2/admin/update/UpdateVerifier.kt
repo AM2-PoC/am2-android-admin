@@ -8,17 +8,16 @@ import java.io.FileInputStream
 import java.security.MessageDigest
 
 object UpdateVerifier {
-    private const val EXPECTED_PACKAGE = "com.am2.admin"
-
     fun verify(file: File, metadata: UpdateMetadata, installedVersionCode: Long, packageManager: PackageManager): Boolean {
         var valid = false
         try {
+            if (!com.am2.admin.BuildConfig.SELF_UPDATE_ENABLED) return false
             if (!file.isFile || file.length() < 100 * 1024L) return false
             if (metadata.versionCode <= installedVersionCode || sha256(file) != metadata.sha256) return false
             val flags = PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
             @Suppress("DEPRECATION")
             val archive = packageManager.getPackageArchiveInfo(file.absolutePath, flags) ?: return false
-            if (archive.packageName != EXPECTED_PACKAGE) return false
+            if (archive.packageName != com.am2.admin.BuildConfig.APPLICATION_ID) return false
             @Suppress("DEPRECATION")
             val version = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode else archive.versionCode.toLong()
             if (version != metadata.versionCode) return false
