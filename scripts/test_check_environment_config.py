@@ -44,6 +44,9 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", text)
         self.assertEqual(1, text.count("actions/upload-artifact@v4"))
         self.assertIn("retention-days: 3", text)
+        self.assertIn("AM2_APPROVED_SIGNER_SHA256", text)
+        self.assertIn('aapt" dump badging', text)
+        self.assertIn("Production release requires AM2_APPROVED_SIGNER_SHA256", GRADLE.read_text())
 
 
 if __name__ == "__main__":

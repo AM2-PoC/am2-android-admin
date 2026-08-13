@@ -99,7 +99,11 @@ jobs:
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Full tests and unsigned production APK
-        run: ./gradlew --no-daemon :app:test :app:assembleProductionRelease
+        env:
+          AM2_APPROVED_SIGNER_SHA256: ${{ vars.AM2_APPROVED_SIGNER_SHA256 }}
+        run: |
+          test "$(printf '%s' "$AM2_APPROVED_SIGNER_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]' | grep -Ec '^[0-9a-f]{64}$')" -eq 1
+          ./gradlew --no-daemon :app:test :app:assembleProductionRelease -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256"
       - name: Record artifact identity
         shell: bash
         run: |
@@ -109,12 +113,14 @@ jobs:
           mkdir -p release-artifact
           cp "$APK" release-artifact/am2-admin-production-unsigned.apk
           sha256sum release-artifact/am2-admin-production-unsigned.apk > release-artifact/am2-admin-production-unsigned.apk.sha256
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production-unsigned.apk > release-artifact/apk-badging.txt
+          stat --printf='byte_size=%s\n' release-artifact/am2-admin-production-unsigned.apk > release-artifact/build-metadata.txt
           if "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs release-artifact/am2-admin-production-unsigned.apk > release-artifact/signer-metadata.txt 2>&1; then
             printf 'signed=true\n' >> release-artifact/signer-metadata.txt
           else
             printf 'signed=false\nsigner_sha256=none\n' > release-artifact/signer-metadata.txt
           fi
-          printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" > release-artifact/build-metadata.txt
+          printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" >> release-artifact/build-metadata.txt
       - name: Upload release candidate only
         uses: actions/upload-artifact@v4
         with:

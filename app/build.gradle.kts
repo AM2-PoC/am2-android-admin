@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
+
 fun quotedBuildConfig(value: String): String = "\"$value\""
 
 fun validateEndpoint(environment: String, value: String, host: String): String {
@@ -29,7 +31,6 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
         buildConfigField("String", "APPROVED_UPDATE_SIGNER_SHA256", "\"${approvedSigner.get()}\"")
         buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "false")
     }
@@ -57,6 +58,12 @@ android {
             buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/", "webadmin.am2-poc.com")))
             buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/update/admin.apk", "webadmin.am2-poc.com")))
+            val signer = approvedSigner.get().replace(":", "").lowercase()
+            if (gradle.startParameter.taskNames.any { it.contains("Production", ignoreCase = true) && it.contains("Release", ignoreCase = true) }) {
+                require(Regex("^[0-9a-f]{64}$").matches(signer)) {
+                    "Production release requires AM2_APPROVED_SIGNER_SHA256"
+                }
+            }
         }
     }
 
