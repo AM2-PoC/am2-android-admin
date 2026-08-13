@@ -4,6 +4,20 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
+  schedule:
+    - cron: "47 18 * * *"
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Compatibility lane"
+        required: true
+        default: main
+        type: choice
+        options:
+          - main
+          - nightly
+          - release
 
 permissions:
   contents: read
@@ -13,10 +27,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  android-ci:
-    name: android-ci
+  policy-and-build:
+    name: policy-and-build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -25,20 +39,92 @@ jobs:
           java-version: "17"
           cache: gradle
       - uses: android-actions/setup-android@v3
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null || true
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Verify sanitized logging policy
+      - name: Verify source policies
         run: |
           python3 scripts/test_check_log_policy.py
           python3 scripts/check_log_policy.py
-      - name: Unit tests and debug build
-        run: ./gradlew --no-daemon clean :app:testDebugUnitTest :app:assembleDebug
-      - name: Upload debug APK
+          python3 scripts/test_check_environment_config.py
+      - name: Unit tests and DEV debug build
+        run: ./gradlew --no-daemon :app:testDevDebugUnitTest :app:assembleDevDebug :app:assembleDevDebugAndroidTest
+
+  compatibility:
+    name: compatibility-api-${{ matrix.api }}
+    needs: policy-and-build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        api: ${{ fromJSON((github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') || github.event.inputs.lane == 'nightly' || github.event.inputs.lane == 'release') && '[24,35]' || '[35]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Install Android toolchain
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Build DEV test APKs
+        run: ./gradlew --no-daemon :app:assembleDevDebug :app:assembleDevDebugAndroidTest
+      - name: Run Admin compatibility checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: ./gradlew --no-daemon :app:connectedDevDebugAndroidTest
+
+  release-artifact:
+    name: release-artifact
+    needs: compatibility
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.lane == 'release')
+    runs-on: ubuntu-latest
+    environment: android-release
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Install Android toolchain
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Full tests and unsigned production APK
+        env:
+          AM2_APPROVED_SIGNER_SHA256: ${{ vars.AM2_APPROVED_SIGNER_SHA256 }}
+        run: |
+          test "$(printf '%s' "$AM2_APPROVED_SIGNER_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]' | grep -Ec '^[0-9a-f]{64}$')" -eq 1
+          ./gradlew --no-daemon :app:test :app:assembleProductionRelease -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256"
+      - name: Record artifact identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/production/release -name '*.apk' -type f -print -quit)"
+          test -n "$APK"
+          mkdir -p release-artifact
+          cp "$APK" release-artifact/am2-admin-production-unsigned.apk
+          sha256sum release-artifact/am2-admin-production-unsigned.apk > release-artifact/am2-admin-production-unsigned.apk.sha256
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production-unsigned.apk > release-artifact/apk-badging.txt
+          stat --printf='byte_size=%s\n' release-artifact/am2-admin-production-unsigned.apk > release-artifact/build-metadata.txt
+          if "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs release-artifact/am2-admin-production-unsigned.apk > release-artifact/signer-metadata.txt 2>&1; then
+            printf 'signed=true\n' >> release-artifact/signer-metadata.txt
+          else
+            printf 'signed=false\nsigner_sha256=none\n' > release-artifact/signer-metadata.txt
+          fi
+          printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" >> release-artifact/build-metadata.txt
+      - name: Upload release candidate only
         uses: actions/upload-artifact@v4
         with:
-          name: am2-android-admin-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: am2-admin-production-unsigned-${{ github.sha }}
+          path: release-artifact/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 3
