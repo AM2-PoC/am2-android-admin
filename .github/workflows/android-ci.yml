@@ -69,6 +69,11 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android toolchain
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Build DEV test APKs
         run: ./gradlew --no-daemon :app:assembleDevDebug :app:assembleDevDebugAndroidTest
       - name: Run Admin compatibility checks
@@ -77,9 +82,10 @@ jobs:
           api-level: ${{ matrix.api }}
           arch: x86_64
           target: default
-          disable-animations: true
+          disable-animations: false
+          disable-linux-hw-accel: false
           emulator-boot-timeout: 900
-          script: ./gradlew --no-daemon :app:connectedDevDebugAndroidTest
+          script: sh scripts/run_emulator_compatibility.sh "com.am2.admin.dev"
 
   release-artifact:
     name: release-artifact
