@@ -48,6 +48,22 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn('aapt" dump badging', text)
         self.assertIn("Production release requires AM2_APPROVED_SIGNER_SHA256", GRADLE.read_text())
 
+    def test_compatibility_uses_accelerated_emulator_and_explicit_readiness(self):
+        text = WORKFLOW.read_text()
+        helper = ROOT / "scripts/run_emulator_compatibility.sh"
+        self.assertIn('KERNEL=="kvm", GROUP="kvm", MODE="0666"', text)
+        self.assertIn("disable-linux-hw-accel: false", text)
+        self.assertIn("disable-animations: false", text)
+        self.assertIn('script: sh scripts/run_emulator_compatibility.sh "com.am2.admin.dev"', text)
+        self.assertTrue(helper.is_file())
+        helper_text = helper.read_text()
+        self.assertIn("sys.boot_completed", helper_text)
+        self.assertIn("cmd package list packages", helper_text)
+        self.assertIn("settings get global device_provisioned", helper_text)
+        self.assertIn("adb install --no-streaming", helper_text)
+        self.assertIn("adb shell monkey", helper_text)
+        self.assertIn("adb shell am instrument", helper_text)
+
 
 if __name__ == "__main__":
     unittest.main()
