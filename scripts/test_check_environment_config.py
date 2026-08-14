@@ -37,13 +37,28 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("BuildConfig.APPLICATION_ID", verifier)
         self.assertNotIn('EXPECTED_PACKAGE = "com.am2.admin"', verifier)
 
-    def test_ci_uploads_only_release_artifacts(self):
+    def test_ci_has_bounded_staging_candidate_contract(self):
+        text = WORKFLOW.read_text()
+        self.assertIn("- staging", text)
+        self.assertIn("name: staging-artifact", text)
+        self.assertIn("github.event.inputs.lane == 'staging'", text)
+        self.assertIn("assembleStagingDebug", text)
+        self.assertIn("am2-admin-staging-debug.apk", text)
+        self.assertIn("SHA256SUMS", text)
+        self.assertIn("environment=staging", text)
+        self.assertIn("variant=StagingDebug", text)
+        self.assertIn("api_range=24+", text)
+        self.assertIn("am2-admin-staging-debug-${{ github.sha }}", text)
+        self.assertIn("retention-days: 3", text)
+        self.assertNotIn("AM2_APPROVED_SIGNER_SHA256", text[text.index("name: staging-artifact"):text.index("name: release-artifact")])
+        self.assertNotIn("assembleProductionRelease", text[text.index("name: staging-artifact"):text.index("name: release-artifact")])
+
+    def test_ci_preserves_production_signing_boundary(self):
         text = WORKFLOW.read_text()
         self.assertIn("github.event_name != 'pull_request'", text)
         self.assertIn("github.event.inputs.lane == 'release'", text)
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", text)
-        self.assertEqual(1, text.count("actions/upload-artifact@v4"))
-        self.assertIn("retention-days: 3", text)
+        self.assertEqual(2, text.count("actions/upload-artifact@v4"))
         self.assertIn("AM2_APPROVED_SIGNER_SHA256", text)
         self.assertIn('aapt" dump badging', text)
         self.assertIn("Production release requires AM2_APPROVED_SIGNER_SHA256", GRADLE.read_text())
