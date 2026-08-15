@@ -5,10 +5,13 @@ import android.graphics.Color
 import android.view.MenuItem
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import com.am2.admin.R
+import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.data.pref.SessionManager
 import com.am2.admin.ui.access.UserAccessActivity
 import com.am2.admin.ui.admin.AdminPanelActivity
@@ -65,8 +68,16 @@ abstract class BaseActivity : AppCompatActivity() {
             R.id.nav_admin_panel -> AdminPanelActivity::class.java
             R.id.nav_settings -> SettingsActivity::class.java
             R.id.nav_logout -> {
-                sessionManager.logout()
-                LoginActivity::class.java
+                lifecycleScope.launch {
+                    try {
+                        RetrofitClient.instance.logout()
+                    } finally {
+                        sessionManager.logout()
+                        startActivity(Intent(this@BaseActivity, LoginActivity::class.java))
+                        finishAffinity()
+                    }
+                }
+                null
             }
             else -> null
         }

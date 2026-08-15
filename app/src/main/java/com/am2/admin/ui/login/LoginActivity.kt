@@ -48,14 +48,16 @@ class LoginActivity : AppCompatActivity() {
                 val response = RetrofitClient.instance.login(username, password)
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
-                    if (loginResponse?.success == true) {
-                        // Simpan Sesi
+                    if (loginResponse?.success == true && !loginResponse.csrf_token.isNullOrBlank()) {
+                        // Identity is still displayed locally, but the backend
+                        // derives authorization from the encrypted cookie session.
                         sessionManager.saveSession(
                             adminId = loginResponse.admin_id ?: -1,
                             username = loginResponse.username ?: "Admin",
-                            role = loginResponse.role ?: "admin"
+                            role = loginResponse.role ?: "admin",
+                            csrfToken = loginResponse.csrf_token,
                         )
-                        
+
                         Toast.makeText(this@LoginActivity, "Login Berhasil", Toast.LENGTH_SHORT).show()
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
