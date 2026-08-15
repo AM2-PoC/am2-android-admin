@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import unittest
 from pathlib import Path
 
@@ -28,14 +29,24 @@ class EnvironmentConfigTest(unittest.TestCase):
     def test_runtime_endpoints_come_from_build_config(self):
         retrofit = (ROOT / "app/src/main/java/com/am2/admin/data/api/RetrofitClient.kt").read_text()
         update = (ROOT / "app/src/main/java/com/am2/admin/update/UpdateMetadata.kt").read_text()
-        settings = (ROOT / "app/src/main/java/com/am2/admin/ui/settings/SettingsActivity.kt").read_text()
         verifier = (ROOT / "app/src/main/java/com/am2/admin/update/UpdateVerifier.kt").read_text()
         self.assertIn("BuildConfig.BASE_URL", retrofit)
         self.assertIn("BuildConfig.UPDATE_APK_URL", update)
-        self.assertIn("BuildConfig.BASE_URL", settings)
         self.assertIn("BuildConfig.SELF_UPDATE_ENABLED", verifier)
         self.assertIn("BuildConfig.APPLICATION_ID", verifier)
         self.assertNotIn('EXPECTED_PACKAGE = "com.am2.admin"', verifier)
+
+    def test_no_source_file_hardcodes_an_endpoint(self):
+        # The rule is that no file carries an endpoint of its own, so check it
+        # by absence across the tree. Naming a BuildConfig field that had to
+        # appear inside one screen made the policy fail when that screen
+        # legitimately stopped addressing the network at all.
+        offenders = sorted(
+            path.relative_to(ROOT).as_posix()
+            for path in (ROOT / "app/src/main/java").rglob("*.kt")
+            if re.search(r'"https?://', path.read_text())
+        )
+        self.assertEqual([], offenders)
 
     def test_ci_has_bounded_staging_candidate_contract(self):
         text = WORKFLOW.read_text()

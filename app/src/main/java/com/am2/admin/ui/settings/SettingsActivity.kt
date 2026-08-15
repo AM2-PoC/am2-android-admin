@@ -81,9 +81,10 @@ class SettingsActivity : BaseActivity() {
         }
 
         binding.btnExportDb.setOnClickListener {
-            val url = "${com.am2.admin.BuildConfig.BASE_URL}api_settings.php?action=export_db&admin_id=${sessionManager.getAdminId()}&role=${sessionManager.getRole()}"
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            startActivity(intent)
+            // A browser cannot use this app's encrypted cookie session. Keep
+            // export unavailable until it has a native authenticated download
+            // flow rather than leaking the operation onto an unauthenticated URL.
+            Toast.makeText(this, "Ekspor database belum tersedia di Admin Native", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnImportDb.setOnClickListener {
