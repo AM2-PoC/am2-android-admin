@@ -111,6 +111,7 @@ dependencies {
     // OpenStreetMap (Alternative to Google Maps)
     implementation(libs.osmdroid)
     implementation(libs.androidx.preference.ktx)
+    implementation(libs.androidx.security.crypto)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

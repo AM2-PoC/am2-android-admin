@@ -13,6 +13,9 @@ interface ApiService {
         @Field("password") password: String
     ): Response<LoginResponse>
 
+    @POST("api_logout.php")
+    suspend fun logout(): Response<GenericResponse>
+
     @GET("api_dashboard_stats.php")
     suspend fun getDashboardStats(
         @Query("admin_id") adminId: Int,
