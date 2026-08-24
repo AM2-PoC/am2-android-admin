@@ -106,7 +106,37 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      # One key across every staging build, so a handset can be updated in
+      # place. Without it each runner generates its own throwaway debug key and
+      # the field pays an uninstall per round. The keystore arrives as base64
+      # because a secret is text, and is written to RUNNER_TEMP rather than the
+      # workspace so no packaging step can pick it up.
+      - name: Restore the staging signing key
+        id: staging_key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AM2_STAGING_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::warning::no staging keystore configured; this APK cannot be installed over the previous one"
+            echo "path=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/staging.jks"
+          echo "path=${RUNNER_TEMP}/staging.jks" >> "$GITHUB_OUTPUT"
+      # Passed as ORG_GRADLE_PROJECT_* rather than -P: Gradle reads those as
+      # project properties, and a password on the command line is visible in
+      # the process list to anything else running on the machine.
+      #
+      # All four empty is the unconfigured case and builds normally. Some but
+      # not all is a misconfiguration, and build.gradle.kts stops on it by name
+      # rather than quietly signing with the runner's own debug key.
       - name: Build staging debug candidate
+        env:
+          ORG_GRADLE_PROJECT_AM2_STAGING_KEYSTORE_FILE: ${{ steps.staging_key.outputs.path }}
+          ORG_GRADLE_PROJECT_AM2_STAGING_KEYSTORE_PASSWORD: ${{ secrets.AM2_STAGING_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_AM2_STAGING_KEY_ALIAS: ${{ secrets.AM2_STAGING_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_AM2_STAGING_KEY_PASSWORD: ${{ secrets.AM2_STAGING_KEY_PASSWORD }}
         run: ./gradlew --no-daemon :app:testStagingDebugUnitTest :app:assembleStagingDebug
       - name: Record staging artifact identity
         shell: bash
@@ -135,9 +165,20 @@ jobs:
   release-artifact:
     name: release-artifact
     needs: compatibility
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.lane == 'release')
+    # The ref check lives here rather than in a deployment branch policy on the
+    # `android-release` environment. That policy allowed main and v* and was the
+    # only thing stopping a dispatched release from an arbitrary branch -- the
+    # condition below used to accept any ref for lane=release. GitHub ignores
+    # environment protection rules outright on a private repository under Free,
+    # so the policy would have gone quiet without failing anything, leaving a
+    # line that looked like a guard. Conditions are read from the workflow file
+    # at the commit being run, and that does not depend on the plan.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v')
+      || (github.event_name == 'workflow_dispatch'
+          && github.event.inputs.lane == 'release'
+          && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    environment: android-release
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -149,12 +190,30 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Full tests and unsigned production APK
+      # Written to RUNNER_TEMP, never the workspace -- the artifact upload step
+      # below globs a directory, and a key inside it would be published.
+      - name: Restore the upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AM2_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "AM2_UPLOAD_KEYSTORE_BASE64 is not set; a release cannot be signed" >&2
+            exit 1
+          fi
+          printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/upload.jks"
+      - name: Full tests and signed production APK
         env:
           AM2_APPROVED_SIGNER_SHA256: ${{ vars.AM2_APPROVED_SIGNER_SHA256 }}
+          ORG_GRADLE_PROJECT_AM2_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
+          ORG_GRADLE_PROJECT_AM2_KEYSTORE_PASSWORD: ${{ secrets.AM2_UPLOAD_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_AM2_KEY_ALIAS: ${{ secrets.AM2_UPLOAD_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_AM2_KEY_PASSWORD: ${{ secrets.AM2_UPLOAD_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           test "$(printf '%s' "$AM2_APPROVED_SIGNER_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]' | grep -Ec '^[0-9a-f]{64}$')" -eq 1
-          ./gradlew --no-daemon :app:test :app:assembleProductionRelease -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256"
+          ./gradlew --no-daemon :app:test :app:assembleProductionRelease \
+            -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256"
       - name: Record artifact identity
         shell: bash
         run: |
@@ -162,20 +221,21 @@ jobs:
           APK="$(find app/build/outputs/apk/production/release -name '*.apk' -type f -print -quit)"
           test -n "$APK"
           mkdir -p release-artifact
-          cp "$APK" release-artifact/am2-admin-production-unsigned.apk
-          sha256sum release-artifact/am2-admin-production-unsigned.apk > release-artifact/am2-admin-production-unsigned.apk.sha256
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production-unsigned.apk > release-artifact/apk-badging.txt
-          stat --printf='byte_size=%s\n' release-artifact/am2-admin-production-unsigned.apk > release-artifact/build-metadata.txt
-          if "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs release-artifact/am2-admin-production-unsigned.apk > release-artifact/signer-metadata.txt 2>&1; then
-            printf 'signed=true\n' >> release-artifact/signer-metadata.txt
-          else
-            printf 'signed=false\nsigner_sha256=none\n' > release-artifact/signer-metadata.txt
-          fi
+          cp "$APK" release-artifact/am2-admin-production.apk
+          sha256sum release-artifact/am2-admin-production.apk > release-artifact/am2-admin-production.apk.sha256
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production.apk > release-artifact/apk-badging.txt
+          stat --printf='byte_size=%s\n' release-artifact/am2-admin-production.apk > release-artifact/build-metadata.txt
+          # A failure here stops the lane. It used to record signed=false and
+          # upload anyway, which publishes something Play refuses and no
+          # handset can install over.
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
+            release-artifact/am2-admin-production.apk > release-artifact/signer-metadata.txt
+          printf 'signed=true\n' >> release-artifact/signer-metadata.txt
           printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" >> release-artifact/build-metadata.txt
       - name: Upload release candidate only
         uses: actions/upload-artifact@v4
         with:
-          name: am2-admin-production-unsigned-${{ github.sha }}
+          name: am2-admin-release-${{ github.sha }}
           path: release-artifact/
           if-no-files-found: error
           retention-days: 3

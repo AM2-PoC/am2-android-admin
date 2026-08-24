@@ -7,6 +7,65 @@ plugins {
 
 val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
 
+/*
+ * Release signing material, supplied from outside the repository.
+ *
+ * Absent by default: a developer without the key still builds and runs. What
+ * must not happen is *half* present. Hand Gradle a keystore path with no
+ * password and it attaches no signing config at all, so the release artifact
+ * comes out signed with the debug key -- it builds, it installs, and it is not
+ * a release. Nothing in the output says otherwise.
+ *
+ * The check runs at configuration time, so a half-configured machine fails
+ * every Gradle invocation rather than only the release task. The wrong state
+ * should be loud where it is set, not discovered later in an artifact that has
+ * already shipped.
+ */
+val signingProps: Map<String, String?> = listOf(
+    "AM2_KEYSTORE_FILE",
+    "AM2_KEYSTORE_PASSWORD",
+    "AM2_KEY_ALIAS",
+    "AM2_KEY_PASSWORD",
+).associateWith { name ->
+    providers.gradleProperty(name).orNull?.takeIf { it.isNotBlank() }
+}
+val signingConfigured = signingProps.values.all { it != null }
+require(signingConfigured || signingProps.values.all { it == null }) {
+    "Release signing is half configured; missing: " +
+        signingProps.filterValues { it == null }.keys.joinToString(", ")
+}
+
+/*
+ * The staging key, which is a different key on purpose.
+ *
+ * Android permits an install over an existing app only when the new package
+ * carries the same signature. It does not care whether the key is called debug
+ * or release -- a debug keystore holds a real private key. What matters is
+ * continuity, and this module has never had any: every APK is built on a runner
+ * that generates a debug key and discards it, so no Admin build can be
+ * installed over the one before it and each round of field testing costs an
+ * operator their local state.
+ *
+ * Separate from the release key because this one has to live in CI to be of any
+ * use, and the upload key must not. Collapsing them would put the app's
+ * permanent Play identity on every runner that builds a staging APK. Losing the
+ * upload key is recoverable through Play; losing signature continuity for every
+ * sideloaded handset is not.
+ */
+val stagingSigningProps: Map<String, String?> = listOf(
+    "AM2_STAGING_KEYSTORE_FILE",
+    "AM2_STAGING_KEYSTORE_PASSWORD",
+    "AM2_STAGING_KEY_ALIAS",
+    "AM2_STAGING_KEY_PASSWORD",
+).associateWith { name ->
+    providers.gradleProperty(name).orNull?.takeIf { it.isNotBlank() }
+}
+val stagingSigningConfigured = stagingSigningProps.values.all { it != null }
+require(stagingSigningConfigured || stagingSigningProps.values.all { it == null }) {
+    "Staging signing is half configured; missing: " +
+        stagingSigningProps.filterValues { it == null }.keys.joinToString(", ")
+}
+
 fun quotedBuildConfig(value: String): String = "\"$value\""
 
 fun validateEndpoint(environment: String, value: String, host: String): String {
@@ -67,8 +126,37 @@ android {
         }
     }
 
+    signingConfigs {
+        /*
+         * staging is a product flavour on the *debug* build type, so
+         * assembleStagingDebug signs with this one. Overriding the existing
+         * debug config rather than inventing a `staging` build type: a fourth
+         * build type would be one nobody assembles.
+         */
+        if (stagingSigningConfigured) {
+            getByName("debug") {
+                storeFile = file(stagingSigningProps.getValue("AM2_STAGING_KEYSTORE_FILE")!!)
+                storePassword = stagingSigningProps.getValue("AM2_STAGING_KEYSTORE_PASSWORD")
+                keyAlias = stagingSigningProps.getValue("AM2_STAGING_KEY_ALIAS")
+                keyPassword = stagingSigningProps.getValue("AM2_STAGING_KEY_PASSWORD")
+            }
+        }
+        if (signingConfigured) {
+            create("release") {
+                storeFile = file(signingProps.getValue("AM2_KEYSTORE_FILE")!!)
+                storePassword = signingProps.getValue("AM2_KEYSTORE_PASSWORD")
+                keyAlias = signingProps.getValue("AM2_KEY_ALIAS")
+                keyPassword = signingProps.getValue("AM2_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Null when unconfigured, which leaves the artifact unsigned --
+            // the deliberate behaviour for a developer machine. It is never the
+            // debug config, because that would install and look like a release.
+            signingConfig = if (signingConfigured) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
