@@ -7,6 +7,25 @@ plugins {
 
 val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
 
+/**
+ * The build's identity, supplied by CI as its run number.
+ *
+ * This was the literal 2 in every Admin APK ever produced. The device decides
+ * an update exists by comparing version codes, so an unchanging one makes the
+ * channel permanently answer "already current" -- and leaves neither end able
+ * to name the build actually installed.
+ *
+ * A local build keeps a low number, so a developer APK can never look newer
+ * than a published one and is never offered to a field device.
+ */
+val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
+    .map { property ->
+        val parsed = property.trim().toIntOrNull()
+        require(parsed != null && parsed > 0) { "AM2_VERSION_CODE must be a positive integer" }
+        parsed
+    }
+    .orElse(1)
+
 /*
  * Release signing material, supplied from outside the repository.
  *
@@ -86,7 +105,7 @@ android {
         applicationId = "com.am2.admin"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
+        versionCode = buildVersionCode.get()
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

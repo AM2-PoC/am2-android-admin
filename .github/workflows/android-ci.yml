@@ -137,7 +137,7 @@ jobs:
           ORG_GRADLE_PROJECT_AM2_STAGING_KEYSTORE_PASSWORD: ${{ secrets.AM2_STAGING_KEYSTORE_PASSWORD }}
           ORG_GRADLE_PROJECT_AM2_STAGING_KEY_ALIAS: ${{ secrets.AM2_STAGING_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_AM2_STAGING_KEY_PASSWORD: ${{ secrets.AM2_STAGING_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon :app:testStagingDebugUnitTest :app:assembleStagingDebug
+        run: ./gradlew --no-daemon -PAM2_VERSION_CODE="$GITHUB_RUN_NUMBER" :app:testStagingDebugUnitTest :app:assembleStagingDebug
       - name: Record staging artifact identity
         shell: bash
         run: |
@@ -213,7 +213,8 @@ jobs:
           set -euo pipefail
           test "$(printf '%s' "$AM2_APPROVED_SIGNER_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]' | grep -Ec '^[0-9a-f]{64}$')" -eq 1
           ./gradlew --no-daemon :app:test :app:assembleProductionRelease \
-            -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256"
+            -PAM2_APPROVED_SIGNER_SHA256="$AM2_APPROVED_SIGNER_SHA256" \
+            -PAM2_VERSION_CODE="$GITHUB_RUN_NUMBER"
       - name: Record artifact identity
         shell: bash
         run: |
