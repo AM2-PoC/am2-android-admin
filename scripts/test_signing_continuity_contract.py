@@ -129,5 +129,27 @@ class SigningContinuityContractTest(unittest.TestCase):
         )
 
 
+    def test_the_version_code_comes_from_ci(self):
+        # It was the literal 2 in every Admin APK ever produced. The device
+        # decides an update exists by comparing version codes, so an unchanging
+        # one makes the channel permanently answer "already current" -- and
+        # leaves neither end able to name the build actually installed.
+        self.assertNotRegex(
+            self.gradle, r"versionCode\s*=\s*\d+",
+            "versionCode is a literal; every build claims to be the same one",
+        )
+        self.assertIn(
+            "AM2_VERSION_CODE", self.gradle,
+            "the build must take its identity from CI",
+        )
+        for lane in ("assembleStagingDebug", "assembleProductionRelease"):
+            idx = self.workflow.index(lane)
+            window = self.workflow[max(0, idx - 400):idx + 200]
+            self.assertIn(
+                "AM2_VERSION_CODE", window,
+                f"{lane} does not receive a version code, so it falls back to 1",
+            )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
