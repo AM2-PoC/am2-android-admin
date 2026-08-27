@@ -27,27 +27,38 @@ object RetrofitClient {
         check(::appContext.isInitialized) { "RetrofitClient must be initialized from AdminApplication" }
     }
 
+    /*
+     * Persisted as a set, which is safe only because CookieStore guarantees one
+     * entry per (name, domain, path). It did not before: two PHPSESSID cookies
+     * from one login were both kept, and a set has no order to decide which
+     * went out first.
+     */
     private val cookieJar = object : CookieJar {
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             requireInitialized()
-            val existing = sessionManager.cookieStore().mapNotNull { serialized -> Cookie.parse(url, serialized) }
-            val stored = existing
-                .filterNot { prior -> cookies.any { incoming ->
-                    incoming.name == prior.name && incoming.domain == prior.domain && incoming.path == prior.path
-                } }
-                .plus(cookies)
-                .filterNot { cookie -> cookie.expiresAt < System.currentTimeMillis() }
-                .map { cookie -> cookie.toString() }
-                .toSet()
-            sessionManager.saveCookies(stored)
+            val merged = CookieStore.merge(
+                stored = read(url),
+                received = cookies,
+                nowMillis = System.currentTimeMillis(),
+            )
+            write(merged)
         }
 
         override fun loadForRequest(url: HttpUrl): List<Cookie> {
             requireInitialized()
-            val parsed = sessionManager.cookieStore().mapNotNull { Cookie.parse(url, it) }
-            sessionManager.saveCookies(parsed.filterNot { it.expiresAt < System.currentTimeMillis() }.map { it.toString() }.toSet())
-            return parsed.filter { it.matches(url) && it.expiresAt >= System.currentTimeMillis() }
+            val now = System.currentTimeMillis()
+            // Re-saving here is what prunes what has expired since the last
+            // response; the store is only ever touched on a request or a reply.
+            val stored = CookieStore.merge(read(url), emptyList(), now)
+            write(stored)
+            return CookieStore.select(url, stored, now)
         }
+
+        private fun read(url: HttpUrl): List<Cookie> =
+            sessionManager.cookieStore().mapNotNull { serialized -> Cookie.parse(url, serialized) }
+
+        private fun write(cookies: List<Cookie>) =
+            sessionManager.saveCookies(cookies.map { cookie -> cookie.toString() }.toSet())
     }
 
     private val csrfInterceptor = Interceptor { chain ->
