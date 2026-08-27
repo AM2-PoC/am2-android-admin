@@ -48,6 +48,21 @@ class EnvironmentConfigTest(unittest.TestCase):
         )
         self.assertEqual([], offenders)
 
+    def test_the_published_url_matches_the_url_the_app_asks_for(self):
+        # The manifest names a download URL and the server refuses anything but
+        # its own base plus /admin.apk. The app, separately, has the same URL
+        # compiled in as UPDATE_APK_URL. Three places, one string, and nothing
+        # made them agree -- so this does.
+        gradle = GRADLE.read_text()
+        workflow = WORKFLOW.read_text()
+        for base in re.findall(r"--update-base\s+(\S+)", workflow):
+            expected = base.rstrip("/") + "/admin.apk"
+            self.assertIn(
+                f'"{expected}"', gradle,
+                f"CI publishes {expected} but no flavour asks for it; the "
+                "handset would download from somewhere the manifest never named",
+            )
+
     def test_ci_has_bounded_staging_candidate_contract(self):
         text = WORKFLOW.read_text()
         self.assertIn("- staging", text)
