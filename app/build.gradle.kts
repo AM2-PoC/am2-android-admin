@@ -1,4 +1,5 @@
 import java.net.URI
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -25,6 +26,29 @@ val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
         parsed
     }
     .orElse(1)
+
+/*
+ * The marketing version, read from version.properties rather than written here.
+ *
+ * CI has to know this string to write the update manifest the panel serves, and
+ * a quoted literal inside a build script is not something another job can read.
+ * -PAM2_VERSION_NAME overrides it, which is how a one-off build names itself
+ * without a commit.
+ */
+val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
+    .orElse(
+        providers.provider {
+            val file = layout.projectDirectory.file("version.properties").asFile
+            require(file.isFile) { "version.properties is missing: ${file.path}" }
+            val declared = Properties()
+                .apply { file.inputStream().use { load(it) } }
+                .getProperty("versionName")
+                ?.trim()
+                .orEmpty()
+            require(declared.isNotEmpty()) { "version.properties declares no versionName" }
+            declared
+        }
+    )
 
 /*
  * Release signing material, supplied from outside the repository.
@@ -106,7 +130,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = buildVersionCode.get()
-        versionName = "1.1.0"
+        versionName = buildVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "APPROVED_UPDATE_SIGNER_SHA256", "\"${approvedSigner.get()}\"")

@@ -47,6 +47,11 @@ jobs:
           python3 scripts/test_check_log_policy.py
           python3 scripts/check_log_policy.py
           python3 scripts/test_check_environment_config.py
+          # Written, committed, and never run until now. It is the only thing
+          # asserting that both keystores reach the build, that release cannot
+          # fall back to the debug config, and that the version a handset
+          # reports is not a literal -- none of which fails visibly.
+          python3 scripts/test_signing_continuity_contract.py
       - name: Unit tests and DEV debug build
         run: ./gradlew --no-daemon :app:testDevDebugUnitTest :app:assembleDevDebug :app:assembleDevDebugAndroidTest
 

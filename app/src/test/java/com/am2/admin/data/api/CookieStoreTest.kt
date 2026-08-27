@@ -96,4 +96,37 @@ class CookieStoreTest {
         assertEquals(1, merged.size)
         assertEquals("live", merged.single().value)
     }
+
+    @Test
+    fun sendsTheMoreSpecificPathFirst() {
+        // Section 5.4: longest path first. Where two cookies of one name
+        // legitimately coexist, a server that reads the first must get the one
+        // scoped most tightly to what it is serving -- not whichever the store
+        // happened to iterate first.
+        val ordered = CookieStore.select(
+            url = "https://webadmin.am2-poc.com/panel/deep/page".toHttpUrl(),
+            stored = listOf(
+                cookie("scope=root; path=/"),
+                cookie("scope=deep; path=/panel/deep"),
+                cookie("scope=panel; path=/panel"),
+            ),
+            nowMillis = now,
+        )
+
+        assertEquals(listOf("deep", "panel", "root"), ordered.map { it.value })
+    }
+
+    @Test
+    fun neverSendsACookieThatDoesNotMatchTheRequest() {
+        val ordered = CookieStore.select(
+            url = "https://webadmin.am2-poc.com/api_users.php".toHttpUrl(),
+            stored = listOf(
+                cookie("PHPSESSID=live; path=/"),
+                cookie("scope=panel; path=/panel"),
+            ),
+            nowMillis = now,
+        )
+
+        assertEquals(listOf("PHPSESSID"), ordered.map { it.name })
+    }
 }
