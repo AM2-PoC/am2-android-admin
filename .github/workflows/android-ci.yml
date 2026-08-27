@@ -47,6 +47,12 @@ jobs:
           python3 scripts/test_check_log_policy.py
           python3 scripts/check_log_policy.py
           python3 scripts/test_check_environment_config.py
+          # Written, committed, and never run until now. It is the only thing
+          # asserting that both keystores reach the build, that release cannot
+          # fall back to the debug config, and that the version a handset
+          # reports is not a literal -- none of which fails visibly.
+          python3 scripts/test_signing_continuity_contract.py
+          python3 scripts/test_write_update_manifest.py
       - name: Unit tests and DEV debug build
         run: ./gradlew --no-daemon :app:testDevDebugUnitTest :app:assembleDevDebug :app:assembleDevDebugAndroidTest
 
@@ -154,6 +160,21 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs staging-artifact/am2-admin-staging-debug.apk > staging-artifact/signer-metadata.txt
           stat --printf='byte_size=%s\n' staging-artifact/am2-admin-staging-debug.apk > staging-artifact/build-metadata.txt
           printf 'source_commit=%s\nenvironment=staging\nvariant=StagingDebug\napi_range=24+\n' "$GITHUB_SHA" >> staging-artifact/build-metadata.txt
+      # The file the panel serves, written from the build that just produced
+      # the APK rather than by hand. Every value comes from aapt, apksigner or
+      # the commit; the server compares key sets and refuses the whole manifest
+      # on one field out of place, which is how this channel went dead.
+      - name: Write the update manifest
+        run: |
+          set -euo pipefail
+          python3 scripts/write_update_manifest.py \
+            --apk staging-artifact/am2-admin-staging-debug.apk \
+            --badging staging-artifact/apk-badging.txt \
+            --signer staging-artifact/signer-metadata.txt \
+            --build-metadata staging-artifact/build-metadata.txt \
+            --release-notes app/release-notes.json \
+            --update-base https://staging-webadmin.am2-poc.com/update \
+            --out staging-artifact/admin_version.json
       - name: Upload staging candidate only
         uses: actions/upload-artifact@v4
         with:
@@ -233,6 +254,17 @@ jobs:
             release-artifact/am2-admin-production.apk > release-artifact/signer-metadata.txt
           printf 'signed=true\n' >> release-artifact/signer-metadata.txt
           printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" >> release-artifact/build-metadata.txt
+      - name: Write the update manifest
+        run: |
+          set -euo pipefail
+          python3 scripts/write_update_manifest.py \
+            --apk release-artifact/am2-admin-production.apk \
+            --badging release-artifact/apk-badging.txt \
+            --signer release-artifact/signer-metadata.txt \
+            --build-metadata release-artifact/build-metadata.txt \
+            --release-notes app/release-notes.json \
+            --update-base https://webadmin.am2-poc.com/update \
+            --out release-artifact/admin_version.json
       - name: Upload release candidate only
         uses: actions/upload-artifact@v4
         with:

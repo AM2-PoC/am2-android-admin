@@ -1,0 +1,4 @@
+{
+  "id": "Sesi login tidak lagi acak putus: jar cookie mengganti berdasarkan nama, domain dan path, sehingga sakelar fitur tidak lagi ditolak. Versi aplikasi kini berasal dari satu berkas yang juga dibaca CI.",
+  "en": "Logins no longer drop at random: the cookie store now replaces by name, domain and path, so feature switches stop being refused. The app version now comes from one file, which CI reads too."
+}

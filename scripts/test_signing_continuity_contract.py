@@ -128,6 +128,24 @@ class SigningContinuityContractTest(unittest.TestCase):
             "refuses it and a sideload cannot be updated in place",
         )
 
+    def test_the_version_name_is_declared_once_where_ci_can_read_it(self):
+        # It was the literal "1.1.0" beside a versionCode that already came from
+        # CI, so nothing tied the version a handset reports to the version the
+        # panel announces in admin_version.json. They matched by hand.
+        #
+        # The manifest generator has to read this string. A quoted literal in a
+        # Kotlin build script is not something another job can read, which is
+        # why the assertion is that it is NOT one.
+        self.assertNotRegex(
+            self.gradle, r'versionName\s*=\s*"',
+            "versionName is a literal; CI cannot read it to write the manifest",
+        )
+        declared = (ROOT / "app/version.properties")
+        self.assertTrue(declared.is_file(), "app/version.properties is missing")
+        self.assertRegex(
+            declared.read_text(), re.compile(r"^versionName=\S+$", re.MULTILINE),
+            "version.properties must declare exactly one versionName",
+        )
 
     def test_the_version_code_comes_from_ci(self):
         # It was the literal 2 in every Admin APK ever produced. The device
