@@ -51,6 +51,19 @@ val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
     )
 
 /*
+ * The build, appended to the version name as Semantic Versioning build metadata.
+ *
+ * version.properties holds "1.1.0" and a human leaves it there for a release or
+ * ten, so two builds of one release read identically and an operator reading a
+ * version off a handset cannot say which is which.
+ *
+ * Semver puts exactly this after a '+': it identifies the artifact and MUST be
+ * ignored when comparing versions. The alternative -- folding the build into the
+ * PATCH component, 1.1.52 -- claims fifty-two backward compatible bug fixes,
+ * because that is what that component means. Nothing here parses the string
+ * anyway: the handset compares versionCode, and versionName is only ever shown.
+ */
+/*
  * Release signing material, supplied from outside the repository.
  *
  * Absent by default: a developer without the key still builds and runs. What
@@ -142,7 +155,7 @@ android {
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
+            versionNameSuffix = "-dev+${buildVersionCode.get()}"
             resValue("string", "app_name", "am² Admin DEV")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("dev", "https://dev-webadmin.am2-poc.com/", "dev-webadmin.am2-poc.com")))
             buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("dev", "https://dev-webadmin.am2-poc.com/update/admin.apk", "dev-webadmin.am2-poc.com")))
@@ -150,13 +163,20 @@ android {
         create("staging") {
             dimension = "environment"
             applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
+            versionNameSuffix = "-staging+${buildVersionCode.get()}"
             resValue("string", "app_name", "am² Admin STAGING")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/", "staging-webadmin.am2-poc.com")))
             buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/update/admin.apk", "staging-webadmin.am2-poc.com")))
         }
         create("production") {
             dimension = "environment"
+            /*
+             * Build metadata on the production lane too, which a Play-listed app
+             * would not do. This one is sideload-only -- the Play listing belongs
+             * to the Client alone -- so there is no store page to keep tidy, and
+             * every APK that reaches a handset should be able to name itself.
+             */
+            versionNameSuffix = "+${buildVersionCode.get()}"
             buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/", "webadmin.am2-poc.com")))
             buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/update/admin.apk", "webadmin.am2-poc.com")))
