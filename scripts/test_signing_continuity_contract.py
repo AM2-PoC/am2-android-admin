@@ -147,6 +147,39 @@ class SigningContinuityContractTest(unittest.TestCase):
             "version.properties must declare exactly one versionName",
         )
 
+    def test_the_version_name_carries_the_build_it_was_made_from(self):
+        # Two builds of one release read identically. version.properties holds
+        # "1.1.0" and a human leaves it there for a release or ten, so build 51
+        # and build 52 both call themselves 1.1.0-staging and an operator
+        # reading a version off a handset cannot say which one it is.
+        #
+        # Semantic Versioning has a slot for exactly this: everything after a
+        # '+' is build metadata, it identifies the artifact, and it MUST be
+        # ignored when comparing versions. Putting the build in the PATCH
+        # component instead -- 1.1.52 -- would claim fifty-two backward
+        # compatible bug fixes, which is what that component means.
+        #
+        # Every lane carries it, production included, because this app is
+        # sideload-only: docs/explanation/which-key-signs-what.md gives the Play
+        # listing to the Client alone, so there is no store page to keep tidy
+        # and every APK that reaches a handset should be able to name itself.
+        suffixes = re.findall(r'versionNameSuffix\s*=\s*"([^"]*)"', self.gradle)
+        self.assertEqual(
+            len(suffixes), 3,
+            f"expected one versionNameSuffix per flavour, found {len(suffixes)}",
+        )
+        for suffix in suffixes:
+            self.assertIn(
+                "+$", suffix,
+                f"the {suffix!r} lane produces a version name that names no build",
+            )
+
+        declared = (ROOT / "app/version.properties").read_text()
+        self.assertNotRegex(
+            declared, r"versionName=.*\+",
+            "the build belongs to the artifact, not to the release a human declared",
+        )
+
     def test_the_version_code_comes_from_ci(self):
         # It was the literal 2 in every Admin APK ever produced. The device
         # decides an update exists by comparing version codes, so an unchanging
