@@ -121,6 +121,35 @@ class SigningContinuityContractTest(unittest.TestCase):
         self.assertIn("refs/heads/main", header,
                       "a dispatched release must be restricted to main")
 
+    def test_the_release_lane_proves_the_signer_it_declares(self):
+        """A hand-set digest is a second copy of a fact the key already carries.
+
+        The release lane takes AM2_APPROVED_SIGNER_SHA256 from a repository
+        variable and checks that it is sixty-four hex characters. Shape, not
+        truth: a value of the right shape and the wrong content passes, and the
+        build that ships trusts a signer that never signed anything here.
+
+        The consequence is worse in production than anywhere else. The digest
+        is compiled into the APK, so a handset carrying a wrong one refuses
+        every update it will ever be offered, and the only repair is a manual
+        install on each unit -- which is the cost the update channel exists to
+        avoid.
+
+        apksigner already reads what actually signed the artifact. Comparing
+        the two is the whole check, and staging has done it since the day its
+        own signer was derived rather than declared.
+        """
+        block = self.workflow[self.workflow.index("release-artifact:"):]
+        self.assertIn(
+            "signer-metadata.txt", block,
+            "the release lane does not record what signed the artifact",
+        )
+        self.assertRegex(
+            block, r"AM2_APPROVED_SIGNER_SHA256[\s\S]{0,3000}?SIGNED_BY",
+            "the declared signer is never compared with the one that signed, so "
+            "a wrong variable ships and is only discovered on a handset",
+        )
+
     def test_the_release_lane_refuses_to_ship_unsigned(self):
         self.assertNotIn(
             "am2-admin-production-unsigned", self.workflow,
