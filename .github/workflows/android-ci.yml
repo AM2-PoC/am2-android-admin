@@ -142,6 +142,32 @@ jobs:
           fi
           printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/staging.jks"
           echo "path=${RUNNER_TEMP}/staging.jks" >> "$GITHUB_OUTPUT"
+      # Which signer a staging build will trust, read off the key about to sign
+      # it. Without it APPROVED_UPDATE_SIGNER_SHA256 is the empty string its
+      # default provides, and UpdateVerifier refuses every update on a length
+      # check -- after the whole APK has been downloaded, reported as the
+      # artifact's identity being wrong.
+      #
+      # Derived rather than configured: a repository variable would be a second
+      # copy of a fact the keystore already carries, and the drift between them
+      # would surface only as a handset refusing an update. The password goes in
+      # on stdin because a command line is visible in the process list.
+      - name: Read the signer this build will trust
+        id: approved_signer
+        if: steps.staging_key.outputs.path != ''
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.AM2_STAGING_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.AM2_STAGING_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          DIGEST="$(printf '%s\n' "$KEYSTORE_PASSWORD" \
+            | keytool -list -v -keystore "${{ steps.staging_key.outputs.path }}" -alias "$KEY_ALIAS" \
+            | sed -n 's/.*SHA256: *\([0-9A-Fa-f:]*\).*/\1/p' \
+            | head -1 | tr -d ':' | tr 'A-F' 'a-f')"
+          printf '%s' "$DIGEST" | grep -Eq '^[0-9a-f]{64}$' \
+            || { echo "::error::could not read a SHA-256 from the staging keystore"; exit 1; }
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "staging builds will trust $DIGEST"
       # Passed as ORG_GRADLE_PROJECT_* rather than -P: Gradle reads those as
       # project properties, and a password on the command line is visible in
       # the process list to anything else running on the machine.
@@ -155,6 +181,7 @@ jobs:
           ORG_GRADLE_PROJECT_AM2_STAGING_KEYSTORE_PASSWORD: ${{ secrets.AM2_STAGING_KEYSTORE_PASSWORD }}
           ORG_GRADLE_PROJECT_AM2_STAGING_KEY_ALIAS: ${{ secrets.AM2_STAGING_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_AM2_STAGING_KEY_PASSWORD: ${{ secrets.AM2_STAGING_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_AM2_APPROVED_SIGNER_SHA256: ${{ steps.approved_signer.outputs.digest }}
         run: ./gradlew --no-daemon -PAM2_VERSION_CODE="$GITHUB_RUN_NUMBER" :app:testStagingDebugUnitTest :app:assembleStagingDebug
       - name: Record staging artifact identity
         shell: bash
@@ -172,6 +199,17 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs staging-artifact/am2-admin-staging-debug.apk > staging-artifact/signer-metadata.txt
           stat --printf='byte_size=%s\n' staging-artifact/am2-admin-staging-debug.apk > staging-artifact/build-metadata.txt
           printf 'source_commit=%s\nenvironment=staging\nvariant=StagingDebug\napi_range=24+\n' "$GITHUB_SHA" >> staging-artifact/build-metadata.txt
+          # keytool read the key; apksigner reads the artifact. A build that
+          # trusts a signer other than its own fails here rather than weeks
+          # later on a handset, silently.
+          EXPECTED="${{ steps.approved_signer.outputs.digest }}"
+          if [ -n "$EXPECTED" ]; then
+            SIGNED_BY=$(sed -n 's/.*certificate SHA-256 digest: *\([0-9a-fA-F]\{64\}\).*/\1/p' \
+              staging-artifact/signer-metadata.txt | head -1 | tr 'A-F' 'a-f')
+            test "$EXPECTED" = "$SIGNED_BY" \
+              || { echo "::error::build trusts $EXPECTED but was signed by $SIGNED_BY"; exit 1; }
+            printf 'approved_signer=%s\n' "$EXPECTED" >> staging-artifact/build-metadata.txt
+          fi
       # The file the panel serves, written from the build that just produced
       # the APK rather than by hand. Every value comes from aapt, apksigner or
       # the commit; the server compares key sets and refuses the whole manifest

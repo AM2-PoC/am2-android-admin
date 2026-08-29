@@ -180,6 +180,58 @@ class SigningContinuityContractTest(unittest.TestCase):
             "the build belongs to the artifact, not to the release a human declared",
         )
 
+    def test_an_update_is_never_offered_to_a_build_that_cannot_install_it(self):
+        """SELF_UPDATE_ENABLED is the first line of UpdateVerifier.verify().
+
+        On staging it is false, so verify() returns false before it has looked
+        at the file. The settings screen checks anyway, offers the update,
+        downloads the whole APK, and then reports "identitas APK tidak valid"
+        -- about an APK whose identity is correct. The build simply is not
+        permitted to install anything, and says so by blaming the artifact.
+
+        It surfaced only once the staging update channel started answering.
+        Before that the check threw "metadata update tidak tersedia" and the
+        dialog was never reached, so a path that had always been broken looked
+        like a path that worked.
+        """
+        settings = (ROOT / "app/src/main/java/com/am2/admin/ui/settings/SettingsActivity.kt").read_text()
+        check = settings[settings.index("private fun checkUpdate()"):]
+        check = check[:check.index("\n    private fun")]
+        # The guard, not the word. The comment above it says SELF_UPDATE_ENABLED
+        # too, and an earlier version of this assertion passed against a build
+        # where the guard had been deleted and only the prose remained.
+        self.assertRegex(
+            check, r"if\s*\(!\s*BuildConfig\.SELF_UPDATE_ENABLED\s*\)",
+            "an update is offered without asking whether this build may install "
+            "one, so the refusal arrives after the download and blames the APK",
+        )
+
+    def test_staging_may_install_what_staging_publishes(self):
+        # Otherwise the update path can only ever be exercised in production,
+        # which is the one place a first attempt should not happen.
+        block = self.gradle[self.gradle.index('create("staging")'):]
+        block = block[:block.index("\n        }")]
+        self.assertIn(
+            'buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")', block,
+            "staging cannot install its own updates, so nothing exercises the "
+            "update path until production does it for the first time",
+        )
+
+    def test_the_staging_lane_bakes_in_the_signer_it_will_be_asked_to_trust(self):
+        # The second blocker, underneath the first: even permitted, the
+        # approved digest is the empty string its default provides, so the
+        # signer check refuses. Confirmed against the shipped APK -- 664f8217..
+        # appears nowhere in its classes.dex.
+        job = self.workflow[self.workflow.index("staging-artifact:"):]
+        self.assertIn(
+            "AM2_APPROVED_SIGNER_SHA256", job,
+            "the staging build is never told which signer to trust",
+        )
+        self.assertRegex(
+            self.workflow, r"keytool[^\n]*-list",
+            "the trusted signer is stated rather than read off the signing key",
+        )
+
     def test_the_version_code_comes_from_ci(self):
         # It was the literal 2 in every Admin APK ever produced. The device
         # decides an update exists by comparing version codes, so an unchanging
