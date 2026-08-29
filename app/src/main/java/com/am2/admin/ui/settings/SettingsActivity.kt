@@ -99,6 +99,29 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun checkUpdate() {
+        /*
+         * Nothing is offered that this build could not install.
+         *
+         * SELF_UPDATE_ENABLED is the first line of UpdateVerifier.verify(), so
+         * a build without it refuses before looking at the file. This screen
+         * checked anyway: it offered the update, downloaded the whole APK, and
+         * reported "identitas APK tidak valid" -- about an APK whose identity
+         * was correct. The build was simply not permitted to install anything,
+         * and said so by blaming the artifact.
+         *
+         * It surfaced only once the staging channel started answering. Before
+         * that the check threw "metadata update tidak tersedia" and the dialog
+         * was never reached, so a path that had always been broken looked like
+         * a path that worked.
+         */
+        if (!BuildConfig.SELF_UPDATE_ENABLED) {
+            Toast.makeText(
+                this,
+                "Build ini tidak memasang pembaruan sendiri. Unduh dari panel.",
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
         Toast.makeText(this, "Memeriksa pembaruan...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             try {

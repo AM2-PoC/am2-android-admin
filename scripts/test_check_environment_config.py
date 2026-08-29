@@ -76,7 +76,22 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("api_range=24+", text)
         self.assertIn("am2-admin-staging-debug-${{ github.sha }}", text)
         self.assertIn("retention-days: 3", text)
-        self.assertNotIn("AM2_APPROVED_SIGNER_SHA256", text[text.index("name: staging-artifact"):text.index("name: release-artifact")])
+        staging_job = text[text.index("name: staging-artifact"):text.index("name: release-artifact")]
+        # The boundary is the production *key*, not the property name. Staging
+        # has to tell its own build which signer to trust -- without that,
+        # UpdateVerifier refuses every update it is offered on a length check --
+        # and the digest it passes is read from the staging keystore. What must
+        # never cross is the upload key's digest, which lives in vars.
+        self.assertNotIn(
+            "vars.AM2_APPROVED_SIGNER_SHA256", staging_job,
+            "the production signer reaches the staging lane, so a staging build "
+            "would trust production-signed APKs",
+        )
+        self.assertIn(
+            "steps.approved_signer.outputs.digest", staging_job,
+            "staging trusts no signer at all, so every update it downloads is "
+            "refused and reported as the APK's identity being wrong",
+        )
         self.assertNotIn("assembleProductionRelease", text[text.index("name: staging-artifact"):text.index("name: release-artifact")])
 
     def test_ci_preserves_production_signing_boundary(self):
