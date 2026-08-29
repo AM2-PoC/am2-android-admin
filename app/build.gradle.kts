@@ -165,6 +165,13 @@ android {
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging+${buildVersionCode.get()}"
             resValue("string", "app_name", "am² Admin STAGING")
+            /*
+             * Staging installs its own updates, because otherwise the update
+             * path is first attempted in production -- the one place a first
+             * attempt should not happen. The signer it must trust is derived in
+             * CI from the key that signs this lane.
+             */
+            buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/", "staging-webadmin.am2-poc.com")))
             buildConfigField("String", "UPDATE_APK_URL", quotedBuildConfig(validateEndpoint("staging", "https://staging-webadmin.am2-poc.com/update/admin.apk", "staging-webadmin.am2-poc.com")))
         }
