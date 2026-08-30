@@ -1,6 +1,9 @@
 package com.am2.admin.ui
 
 import android.content.Intent
+import android.os.Bundle
+import android.widget.Toast
+import com.am2.admin.data.api.SessionExpiry
 import android.graphics.Color
 import android.view.MenuItem
 import android.widget.TextView
@@ -24,6 +27,16 @@ import com.am2.admin.ui.track.LiveTrackActivity
 import com.am2.admin.ui.users.UsersActivity
 
 abstract class BaseActivity : AppCompatActivity() {
+
+    /*
+     * Every screen, without each one having to remember. A session the server
+     * has forgotten reaches whichever screen the operator happens to be on.
+     */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        observeSessionExpiry()
+    }
+
 
     protected lateinit var sessionManager: SessionManager
     private var drawerLayout: DrawerLayout? = null
@@ -72,9 +85,26 @@ abstract class BaseActivity : AppCompatActivity() {
                     try {
                         RetrofitClient.instance.logout()
                     } finally {
-                        sessionManager.logout()
-                        startActivity(Intent(this@BaseActivity, LoginActivity::class.java))
-                        finishAffinity()
+                        /*
+                         * The write first, and only then the task. logout()
+                         * used to write asynchronously and this line finished
+                         * the stack underneath it, so a session could survive
+                         * being signed out of.
+                         *
+                         * And the login screen is launched with CLEAR_TASK
+                         * rather than beside finishAffinity(): that put the new
+                         * activity into the task being finished, and which of
+                         * the two won was not defined.
+                         */
+                        if (!sessionManager.logout()) {
+                            Toast.makeText(
+                                this@BaseActivity,
+                                "Logout belum tersimpan. Coba lagi.",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        } else {
+                            goToLogin()
+                        }
                     }
                 }
                 null
@@ -86,6 +116,31 @@ abstract class BaseActivity : AppCompatActivity() {
             startActivity(Intent(this, nextActivity))
             if (nextActivity == LoginActivity::class.java) finishAffinity() else finish()
         }
+    }
+
+    /**
+     * A session the server has forgotten sends the operator to sign in again.
+     *
+     * Every screen used to report it as its own feature failing, because a 403
+     * only ever arrived inside a call the screen had made for its own reasons.
+     */
+    private fun observeSessionExpiry() {
+        SessionExpiry.expired.observe(this) { expired ->
+            if (expired != true) return@observe
+            SessionExpiry.acknowledge()
+            Toast.makeText(this, "Sesi berakhir. Masuk lagi.", Toast.LENGTH_LONG).show()
+            goToLogin()
+        }
+    }
+
+    /** The login screen, in a task of its own, with nothing left behind it. */
+    protected fun goToLogin() {
+        startActivity(
+            Intent(this, LoginActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+        )
+        finish()
     }
 
     override fun onBackPressed() {
