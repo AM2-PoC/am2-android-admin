@@ -85,19 +85,23 @@ object RetrofitClient {
     /**
      * A session the server has forgotten, told apart from a failed feature.
      *
-     * The panel keeps a PHP session for session.gc_maxlifetime, 1440 seconds.
-     * Left alone for a few hours the session is gone, while the app still holds
-     * its cookie and CSRF token and still answers true to isLoggedIn(). Every
-     * guarded call then returns 403, and every screen reported it as the
-     * feature failing: "GAGAL memperbarui fitur" on a switch that was never the
-     * problem.
+     * Left alone long enough the panel's session is gone, while the app still
+     * holds its cookie and still answers true to isLoggedIn(). am2_api_auth()
+     * then answers 401 -- correctly, and in JSON -- and every screen reported it
+     * as its own feature failing: "GAGAL memperbarui fitur" on a switch that was
+     * never the problem, because nothing read the status.
+     *
+     * 401 only. 403 is am2_api_authz_denied(), which means the session is fine
+     * and this administrator may not do this; signing them out for touching
+     * something outside their rights would be a worse bug than the one being
+     * fixed.
      *
      * The credentials are dropped here, at the one place that sees the status,
      * and the screens are told once so they can ask for a sign-in instead.
      */
     private val sessionExpiryInterceptor = Interceptor { chain ->
         val response = chain.proceed(chain.request())
-        if (response.code == 403 && ::sessionManager.isInitialized
+        if (response.code == 401 && ::sessionManager.isInitialized
             && !chain.request().url.encodedPath.endsWith("api_login.php")
         ) {
             sessionManager.logout()

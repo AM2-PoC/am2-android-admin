@@ -84,8 +84,15 @@ class SessionLifecycleContractTest(unittest.TestCase):
 
     def test_an_expired_session_is_recognised_rather_than_reported_as_a_feature(self):
         self.assertRegex(
-            self.client, r"403",
+            self.client, r"response\.code\s*==\s*401",
             "nothing notices the status the server uses to say the session is gone",
+        )
+        # 403 is am2_api_authz_denied(): the session is fine and this
+        # administrator may not do this. Signing them out for it would be a
+        # worse bug than the one being fixed.
+        self.assertNotRegex(
+            self.client, r"response\.code\s*==\s*403",
+            "a permission denial signs the administrator out",
         )
         self.assertRegex(
             self.client, r"(sessionExpired|SessionExpiry|onSessionExpired)",
