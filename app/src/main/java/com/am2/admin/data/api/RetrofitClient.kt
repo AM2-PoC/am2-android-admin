@@ -65,10 +65,45 @@ object RetrofitClient {
         val request = chain.request()
         val unsafe = request.method in setOf("POST", "PUT", "PATCH", "DELETE")
         val token = if (::sessionManager.isInitialized) sessionManager.csrfToken() else ""
-        val guarded = if (unsafe && token.isNotEmpty() && !request.url.encodedPath.endsWith("api_login.php")) {
-            request.newBuilder().header("X-CSRF-Token", token).build()
-        } else request
-        chain.proceed(guarded)
+        val builder = request.newBuilder()
+            /*
+             * Say that a JSON refusal can be read.
+             *
+             * am2_csrf_require() writes JSON only when the request says it
+             * accepts JSON, and plain text otherwise. This client never said
+             * so, so a rejected call came back as a body the converter could
+             * not parse -- and the operator was told the feature had failed
+             * rather than that the session had ended.
+             */
+            .header("Accept", "application/json")
+        if (unsafe && token.isNotEmpty() && !request.url.encodedPath.endsWith("api_login.php")) {
+            builder.header("X-CSRF-Token", token)
+        }
+        chain.proceed(builder.build())
+    }
+
+    /**
+     * A session the server has forgotten, told apart from a failed feature.
+     *
+     * The panel keeps a PHP session for session.gc_maxlifetime, 1440 seconds.
+     * Left alone for a few hours the session is gone, while the app still holds
+     * its cookie and CSRF token and still answers true to isLoggedIn(). Every
+     * guarded call then returns 403, and every screen reported it as the
+     * feature failing: "GAGAL memperbarui fitur" on a switch that was never the
+     * problem.
+     *
+     * The credentials are dropped here, at the one place that sees the status,
+     * and the screens are told once so they can ask for a sign-in instead.
+     */
+    private val sessionExpiryInterceptor = Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        if (response.code == 403 && ::sessionManager.isInitialized
+            && !chain.request().url.encodedPath.endsWith("api_login.php")
+        ) {
+            sessionManager.logout()
+            SessionExpiry.announce()
+        }
+        response
     }
 
     // Never log HTTP headers or bodies: sessions use credential-bearing cookies.
@@ -83,6 +118,7 @@ object RetrofitClient {
         val client = OkHttpClient.Builder()
             .cookieJar(cookieJar)
             .addInterceptor(csrfInterceptor)
+            .addInterceptor(sessionExpiryInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

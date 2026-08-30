@@ -35,7 +35,14 @@ class SessionManager(context: Context) {
     }
     fun isLoggedIn(): Boolean = prefs.getBoolean("is_logged_in", false) && csrfToken().isNotEmpty()
 
-    fun logout() {
-        prefs.edit().clear().apply()
-    }
+    /**
+     * Signing out, durable before the caller may end the task.
+     *
+     * apply() writes in the background and the caller's next line finished the
+     * activity stack. A write that had not landed left the session behind, so
+     * an administrator who signed out was still signed in at the next launch.
+     * The answer says whether it actually landed, because a caller that cannot
+     * tell has no way to refuse to move on.
+     */
+    fun logout(): Boolean = prefs.edit().clear().commit()
 }
