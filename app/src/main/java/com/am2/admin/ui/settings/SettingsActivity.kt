@@ -22,6 +22,7 @@ import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.data.pref.SessionManager
 import com.am2.admin.databinding.ActivitySettingsBinding
 import com.am2.admin.ui.BaseActivity
+import com.am2.admin.update.UpdateCheck
 import com.am2.admin.update.UpdateMetadata
 import com.am2.admin.update.UpdateVerifier
 import kotlinx.coroutines.Dispatchers
@@ -162,8 +163,16 @@ class SettingsActivity : BaseActivity() {
                         val body = response.body ?: throw IllegalStateException("APK kosong")
                         destination.outputStream().use { output -> body.byteStream().copyTo(output) }
                     }
-                    if (!UpdateVerifier.verify(destination, metadata, installedVersionCode(), packageManager)) {
-                        throw IllegalStateException("identitas APK tidak valid")
+                    /*
+                     * The reason, not a verdict. Ten checks used to arrive here
+                     * as one sentence about identity, and build 57 refused
+                     * build 63 with it -- about an APK whose identity was
+                     * correct and whose signature had simply never been read.
+                     */
+                    val outcome = UpdateVerifier.check(
+                        destination, metadata, installedVersionCode(), packageManager)
+                    if (outcome is UpdateCheck.Refused) {
+                        throw IllegalStateException(outcome.reason)
                     }
                 }
                 showVerifiedInstallDialog(destination, metadata, installedVersionCode())
@@ -179,10 +188,11 @@ class SettingsActivity : BaseActivity() {
             .setTitle("Pasang Pembaruan")
             .setMessage("Update v${metadata.versionName} sudah diverifikasi. Pasang sekarang?")
             .setPositiveButton("Pasang") { _, _ ->
-                if (UpdateVerifier.verify(file, metadata, installedVersionCode, packageManager)) {
-                    installUpdate(file)
-                } else {
-                    Toast.makeText(this, "APK berubah atau tidak valid", Toast.LENGTH_LONG).show()
+                when (val outcome = UpdateVerifier.check(
+                    file, metadata, installedVersionCode, packageManager)) {
+                    is UpdateCheck.Ok -> installUpdate(file)
+                    is UpdateCheck.Refused ->
+                        Toast.makeText(this, "Update ditolak: ${outcome.reason}", Toast.LENGTH_LONG).show()
                 }
             }
             .setNegativeButton("Nanti", null)
