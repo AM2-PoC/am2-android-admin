@@ -16,3 +16,14 @@ local.properties
 
 __pycache__/
 *.py[cod]
+
+# Signing material. The release key never lives here.
+*.jks
+*.keystore
+keystore.properties
+
+# Personal Android Studio state; shared project configuration stays tracked.
+/.idea/appInsightsSettings.xml
+/.idea/deviceManager.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/runConfigurations.xml
