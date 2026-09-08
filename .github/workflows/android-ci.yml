@@ -33,13 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Verify source policies
@@ -81,13 +81,13 @@ jobs:
       matrix:
         api: ${{ fromJSON((github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') || github.event.inputs.lane == 'nightly' || github.event.inputs.lane == 'release') && '[24,35]' || '[35]') }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android toolchain
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Enable KVM
@@ -98,7 +98,7 @@ jobs:
       - name: Build DEV test APKs
         run: ./gradlew --no-daemon :app:assembleDevDebug :app:assembleDevDebugAndroidTest
       - name: Run Admin compatibility checks
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64
@@ -115,13 +115,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       # One key across every staging build, so a handset can be updated in
@@ -226,7 +226,7 @@ jobs:
             --update-base https://staging-webadmin.am2-poc.com/update \
             --out staging-artifact/admin_version.json
       - name: Upload staging candidate only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: am2-admin-staging-debug-${{ github.sha }}
           path: staging-artifact/
@@ -252,13 +252,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       # Written to RUNNER_TEMP, never the workspace -- the artifact upload step
@@ -334,7 +334,7 @@ jobs:
             --update-base https://webadmin.am2-poc.com/update \
             --out release-artifact/admin_version.json
       - name: Upload release candidate only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: am2-admin-release-${{ github.sha }}
           path: release-artifact/
