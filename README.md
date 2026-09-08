@@ -1,15 +1,19 @@
 # AM2 Android Admin
 
-Canonical repository for the native AM2 Android admin application (`com.am2.admin`).
+**Internal repository:** Not intended for public use or external contributions. Repository access and use require authorization by the repository owner.
+
+AM2 Android administration application (`com.am2.admin`).
 
 ## Verification
 
 ```bash
 python3 scripts/test_check_log_policy.py
 python3 scripts/check_log_policy.py
-./gradlew :app:testDebugUnitTest :app:assembleDebug
+./gradlew --no-daemon :app:testDevDebugUnitTest :app:assembleDevDebug
 ```
 
-Production release remains gated on the production signing key and physical-device validation.
+Android builds, dependency resolution, emulators, compatibility matrices, signing, staging, and release publication use isolated developer environments or GitHub-hosted ephemeral CI—not the production VPS. Production release remains a separately approved signer, artifact, and physical-device gate.
 
-Source previously lived under `APK Admin_Native/` in `AM2-PoC/AM2-Legacy`; history was preserved with `git subtree split`.
+## Security
+
+This repository does not provide a public vulnerability-reporting channel. Authorized personnel must use the security process assigned to their role. Do not include credentials, signing material, personal data, production data, or exploit details in tickets, logs, or pull requests.
