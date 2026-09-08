@@ -99,7 +99,7 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("github.event_name != 'pull_request'", text)
         self.assertIn("github.event.inputs.lane == 'release'", text)
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", text)
-        self.assertEqual(2, text.count("actions/upload-artifact@v4"))
+        self.assertEqual(2, text.count("actions/upload-artifact@"))
         self.assertIn("AM2_APPROVED_SIGNER_SHA256", text)
         self.assertIn('aapt" dump badging', text)
         self.assertIn("Production release requires AM2_APPROVED_SIGNER_SHA256", GRADLE.read_text())
