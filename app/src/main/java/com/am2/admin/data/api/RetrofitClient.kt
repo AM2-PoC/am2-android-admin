@@ -7,7 +7,7 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
+
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -110,10 +110,6 @@ object RetrofitClient {
         response
     }
 
-    // Never log HTTP headers or bodies: sessions use credential-bearing cookies.
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.NONE
-    }
 
     private fun api(): ApiService {
         requireInitialized()
@@ -123,7 +119,6 @@ object RetrofitClient {
             .cookieJar(cookieJar)
             .addInterceptor(csrfInterceptor)
             .addInterceptor(sessionExpiryInterceptor)
-            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

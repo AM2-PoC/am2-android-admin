@@ -198,7 +198,6 @@ dependencies {
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
-    implementation(libs.okhttp.logging)
     
     // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -206,7 +205,6 @@ dependencies {
     
     // UI & Charts
     implementation(libs.mpandroidchart)
-    implementation(libs.glide)
     
     // OpenStreetMap (Alternative to Google Maps)
     implementation(libs.osmdroid)

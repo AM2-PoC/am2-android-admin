@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 import sys
 
 root = Path(__file__).resolve().parents[1]
+
+
+def executable_text(content: str) -> str:
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.S)
+    return re.sub(r"//[^\n]*", "", content)
+
+
 checks = {
     "app/src/main/java/com/am2/admin/update/UpdateMetadata.kt": [
         "versionCode",
@@ -18,7 +26,7 @@ checks = {
         "delete",
     ],
     "app/src/main/java/com/am2/admin/ui/settings/SettingsActivity.kt": [
-        "UpdateVerifier.verify",
+        "UpdateVerifier.check",
         "showVerifiedInstallDialog",
         "FileProvider.getUriForFile",
         "ACTION_INSTALL_PACKAGE",
@@ -46,11 +54,12 @@ for filename, required in checks.items():
     if not path.is_file():
         errors.append(f"missing: {filename}")
         continue
-    content = path.read_text()
+    content = executable_text(path.read_text())
     for token in required:
         if token not in content:
             errors.append(f"{filename}: missing {token}")
-if errors:
-    print("\n".join(errors), file=sys.stderr)
-    raise SystemExit(1)
-print("admin secure updater contract: PASS")
+if __name__ == "__main__":
+    if errors:
+        print("\n".join(errors), file=sys.stderr)
+        raise SystemExit(1)
+    print("admin secure updater contract: PASS")

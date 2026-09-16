@@ -104,7 +104,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
         if (nextActivity != null && this::class.java != nextActivity) {
             startActivity(Intent(this, nextActivity))
-            if (nextActivity == LoginActivity::class.java) finishAffinity() else finish()
+            finish()
         }
     }
 

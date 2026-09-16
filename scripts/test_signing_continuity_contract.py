@@ -186,9 +186,9 @@ class SigningContinuityContractTest(unittest.TestCase):
         )
 
     def test_an_update_is_never_offered_to_a_build_that_cannot_install_it(self):
-        """SELF_UPDATE_ENABLED is the first line of UpdateVerifier.verify().
+        """SELF_UPDATE_ENABLED is the first check in UpdateVerifier.check().
 
-        On staging it is false, so verify() returns false before it has looked
+        On staging it is false, so check() refuses before it has looked
         at the file. The settings screen checks anyway, offers the update,
         downloads the whole APK, and then reports "identitas APK tidak valid"
         -- about an APK whose identity is correct. The build simply is not

@@ -135,12 +135,6 @@ object UpdateVerifier {
         return archive.signatures?.toList().orEmpty()
     }
 
-    fun verify(
-        file: File,
-        metadata: UpdateMetadata,
-        installedVersionCode: Long,
-        packageManager: PackageManager,
-    ): Boolean = check(file, metadata, installedVersionCode, packageManager) is UpdateCheck.Ok
 
     fun sha256(file: File): String = FileInputStream(file).use { input ->
         val digest = MessageDigest.getInstance("SHA-256")

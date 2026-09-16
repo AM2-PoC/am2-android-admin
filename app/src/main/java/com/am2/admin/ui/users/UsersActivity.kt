@@ -41,7 +41,7 @@ class UsersActivity : BaseActivity() {
 
         setupRecyclerView()
         setupSearch()
-        setupFab()
+        binding.fabAddUser.setOnClickListener { showAddUserDialog() }
         fetchUsers()
         fetchAllChannels()
     }
@@ -161,9 +161,6 @@ class UsersActivity : BaseActivity() {
         })
     }
 
-    private fun setupFab() {
-        binding.fabAddUser.setOnClickListener { showAddUserDialog() }
-    }
 
     private fun fetchUsers(search: String? = null) {
         lifecycleScope.launch {

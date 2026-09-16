@@ -34,7 +34,7 @@ class AdminPanelActivity : BaseActivity() {
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
         
         setupRecyclerView()
-        setupFab()
+        binding.fabAddAdmin.setOnClickListener { showAdminForm(null) }
         
         fetchAdmins()
         fetchChannels()
@@ -51,9 +51,6 @@ class AdminPanelActivity : BaseActivity() {
         binding.rvAdmins.adapter = adminAdapter
     }
 
-    private fun setupFab() {
-        binding.fabAddAdmin.setOnClickListener { showAdminForm(null) }
-    }
 
     private fun fetchAdmins() {
         lifecycleScope.launch {

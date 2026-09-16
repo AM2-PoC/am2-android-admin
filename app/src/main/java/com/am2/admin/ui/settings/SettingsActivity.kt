@@ -40,7 +40,7 @@ import java.io.FileOutputStream
 class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
-    private val currentVersion: String get() = BuildConfig.VERSION_NAME
+
     private val updateClient = OkHttpClient.Builder()
         .followRedirects(false)
         .followSslRedirects(false)
@@ -61,7 +61,7 @@ class SettingsActivity : BaseActivity() {
 
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
         
-        binding.tvCurrentVersion.text = "Versi Saat Ini: $currentVersion"
+        binding.tvCurrentVersion.text = "Versi Saat Ini: ${BuildConfig.VERSION_NAME}"
         fetchSettings()
 
         binding.btnUpdatePassword.setOnClickListener {
@@ -103,7 +103,7 @@ class SettingsActivity : BaseActivity() {
         /*
          * Nothing is offered that this build could not install.
          *
-         * SELF_UPDATE_ENABLED is the first line of UpdateVerifier.verify(), so
+         * SELF_UPDATE_ENABLED is the first check in UpdateVerifier.check(), so
          * a build without it refuses before looking at the file. This screen
          * checked anyway: it offered the update, downloaded the whole APK, and
          * reported "identitas APK tidak valid" -- about an APK whose identity

@@ -7,7 +7,6 @@ import com.google.android.material.tabs.TabLayout
 import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.databinding.ActivityLogsBinding
 import com.am2.admin.ui.BaseActivity
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -16,7 +15,7 @@ class LogsActivity : BaseActivity() {
     private lateinit var binding: ActivityLogsBinding
     private lateinit var logAdapter: LogAdapter
     private var currentCategory = "ALL"
-    private var syncJob: Job? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +53,7 @@ class LogsActivity : BaseActivity() {
     }
 
     private fun startAutoRefresh() {
-        syncJob = lifecycleScope.launch {
+        lifecycleScope.launch {
             while (true) {
                 fetchLogs()
                 delay(5000)
@@ -79,8 +78,4 @@ class LogsActivity : BaseActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        syncJob?.cancel()
-    }
 }

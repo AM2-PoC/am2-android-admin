@@ -13,10 +13,6 @@ class UserSelectionAdapter(
 
     private val selectedIds = mutableSetOf<String>()
 
-    fun updateData(newUsers: List<User>) {
-        users = newUsers
-        notifyDataSetChanged()
-    }
 
     fun setSelectedIds(ids: List<String>) {
         selectedIds.clear()

@@ -15,10 +15,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.am2.admin.R
 import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.data.model.TrackUnit
-import com.am2.admin.data.pref.SessionManager
+
 import com.am2.admin.databinding.ActivityLiveTrackBinding
 import com.am2.admin.ui.BaseActivity
-import kotlinx.coroutines.Job
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -31,12 +31,11 @@ class LiveTrackActivity : BaseActivity() {
     private lateinit var binding: ActivityLiveTrackBinding
     private val markers = mutableMapOf<String, Marker>()
     private lateinit var trackAdapter: TrackUnitAdapter
-    private var syncJob: Job? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        sessionManager = SessionManager(this)
 
         // OSMDroid configuration
         val ctx = applicationContext
@@ -77,7 +76,7 @@ class LiveTrackActivity : BaseActivity() {
     }
 
     private fun startAutoRefresh() {
-        syncJob = lifecycleScope.launch {
+        lifecycleScope.launch {
             while (true) {
                 fetchTrackData()
                 delay(2000)
@@ -183,8 +182,4 @@ class LiveTrackActivity : BaseActivity() {
         binding.map.onPause()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        syncJob?.cancel()
-    }
 }
