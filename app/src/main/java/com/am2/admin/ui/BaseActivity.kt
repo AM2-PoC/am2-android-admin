@@ -85,17 +85,7 @@ abstract class BaseActivity : AppCompatActivity() {
                     try {
                         RetrofitClient.instance.logout()
                     } finally {
-                        /*
-                         * The write first, and only then the task. logout()
-                         * used to write asynchronously and this line finished
-                         * the stack underneath it, so a session could survive
-                         * being signed out of.
-                         *
-                         * And the login screen is launched with CLEAR_TASK
-                         * rather than beside finishAffinity(): that put the new
-                         * activity into the task being finished, and which of
-                         * the two won was not defined.
-                         */
+                        // Persist logout before clearing the activity stack.
                         if (!sessionManager.logout()) {
                             Toast.makeText(
                                 this@BaseActivity,
@@ -118,12 +108,7 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * A session the server has forgotten sends the operator to sign in again.
-     *
-     * Every screen used to report it as its own feature failing, because a 403
-     * only ever arrived inside a call the screen had made for its own reasons.
-     */
+    /** Redirect expired sessions to a fresh login task. */
     private fun observeSessionExpiry() {
         SessionExpiry.expired.observe(this) { expired ->
             if (expired != true) return@observe

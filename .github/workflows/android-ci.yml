@@ -45,14 +45,8 @@ jobs:
       - name: Verify source policies
         run: |
           set -euo pipefail
-          # Computed, not listed. A hand-maintained list goes stale the first
-          # time somebody adds a contract and forgets, and the failure is silent
-          # in the worst direction: a test that never runs looks exactly like a
-          # test that passes. This repository proved it -- the signing
-          # continuity contract sat here written, committed and never invoked
-          # until somebody noticed it was missing from these three lines.
-          #
-          # The Client has globbed for a while. This is the same selector.
+          # Discover contract scripts dynamically so new checks cannot be
+          # omitted from CI by a stale file list.
           shopt -s nullglob
           contracts=(scripts/test_*.py)
           if [ ${#contracts[@]} -eq 0 ]; then
@@ -301,9 +295,7 @@ jobs:
           sha256sum release-artifact/am2-admin-production.apk > release-artifact/am2-admin-production.apk.sha256
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production.apk > release-artifact/apk-badging.txt
           stat --printf='byte_size=%s\n' release-artifact/am2-admin-production.apk > release-artifact/build-metadata.txt
-          # A failure here stops the lane. It used to record signed=false and
-          # upload anyway, which publishes something Play refuses and no
-          # handset can install over.
+          # Stop the lane when signature verification fails.
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
             release-artifact/am2-admin-production.apk > release-artifact/signer-metadata.txt
           printf 'signed=true\n' >> release-artifact/signer-metadata.txt

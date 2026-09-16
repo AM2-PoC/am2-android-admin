@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""Admin must be installable over its own previous build.
-
-Android permits an install over an existing app only when the new package
-carries the *same* signature. It does not care whether the key is called debug
-or release -- a debug keystore holds a real private key. What matters is
-continuity, and this module has never had any: every APK is built on a runner
-that generates a debug key and discards it, so no Admin build can be installed
-over the one before it. Each round of field testing costs an operator their
-local state, and the Client repository already fixed exactly this.
-
-Two keys, deliberately not one.
-
-The staging key has to live in CI to be of any use. The upload key must not:
-collapsing them would put the application's permanent Play identity on every
-runner that builds a staging APK. Losing the upload key is recoverable through
-Play; losing signature continuity for every sideloaded handset is not.
-
-Unconfigured stays legitimate. A developer without either key still builds and
-runs. What must never happen is *half* configured -- hand Gradle a keystore
-path with no password and it attaches no signing config at all, so the release
-artifact comes out signed with the debug key: it builds, it installs, and it is
-not a release. Nothing in the output says otherwise.
-
-Assertions are booleans so a failure prints its reason, not the file.
-"""
+"""Signing continuity and release identity contract."""
 import re
 import unittest
 from pathlib import Path
@@ -262,10 +238,7 @@ class SigningContinuityContractTest(unittest.TestCase):
         )
 
     def test_the_version_code_comes_from_ci(self):
-        # It was the literal 2 in every Admin APK ever produced. The device
-        # decides an update exists by comparing version codes, so an unchanging
-        # one makes the channel permanently answer "already current" -- and
-        # leaves neither end able to name the build actually installed.
+        # Set the release version code from CI; local builds default to 1.
         self.assertNotRegex(
             self.gradle, r"versionCode\s*=\s*\d+",
             "versionCode is a literal; every build claims to be the same one",
