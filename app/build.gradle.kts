@@ -198,6 +198,7 @@ dependencies {
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
     
     // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
