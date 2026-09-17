@@ -40,7 +40,6 @@ class UserAccessActivity : BaseActivity() {
         binding = ActivityUserAccessBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupRecyclerView()
@@ -98,7 +97,6 @@ class UserAccessActivity : BaseActivity() {
                     role = sessionManager.getRole()
                 )
                 if (response.isSuccessful) {
-                    // Gunakan distinctBy untuk menghindari channel ganda dari API pada Admin Native
                     allChannels = response.body()?.distinctBy { it.id } ?: emptyList()
                 }
             } catch (e: Exception) {
@@ -148,7 +146,6 @@ class UserAccessActivity : BaseActivity() {
                 val stringKeysMap = permissions.mapKeys { it.key.toString() }
                 val permsJson = JSONObject(stringKeysMap).toString()
                 
-                // Pastikan mengirim admin_id untuk log aktivitas
                 val response = RetrofitClient.instance.updateUserAccess(
                     adminId = sessionManager.getAdminId(),
                     userId = userId,

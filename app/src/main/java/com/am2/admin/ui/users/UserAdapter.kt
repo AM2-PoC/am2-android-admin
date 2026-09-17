@@ -39,7 +39,6 @@ class UserAdapter(
                 root.setOnClickListener { onUserClick(user) }
                 btnEdit.setOnClickListener { onEdit(user) }
 
-                // Reset listeners to avoid triggering on manual set
                 switchDuplex.setOnCheckedChangeListener(null)
                 switchMaps.setOnCheckedChangeListener(null)
                 switchP2P.setOnCheckedChangeListener(null)

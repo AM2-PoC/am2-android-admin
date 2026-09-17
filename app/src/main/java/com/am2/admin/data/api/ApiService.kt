@@ -28,7 +28,6 @@ interface ApiService {
         @Query("role") role: String
     ): Response<ChartDataResponse>
 
-    // --- Users ---
     @GET("api_users.php")
     suspend fun getUsers(
         @Query("admin_id") adminId: Int,
@@ -76,7 +75,6 @@ interface ApiService {
         @Field("channels") channelsJson: String
     ): Response<GenericResponse>
 
-    // --- Channels ---
     @GET("api_channels.php")
     suspend fun getChannels(
         @Query("admin_id") adminId: Int,
@@ -111,12 +109,11 @@ interface ApiService {
         @Field("id") id: Int
     ): Response<GenericResponse>
 
-    // --- Channel Access Management ---
     @GET("api_channels.php")
     suspend fun getChannelUsersAccess(
         @Query("action") action: String = "get_users_access",
         @Query("channel_id") channelId: Int
-    ): Response<List<String>> // Returns list of user_ids
+    ): Response<List<String>>
 
     @FormUrlEncoded
     @POST("api_channels.php")
@@ -125,10 +122,9 @@ interface ApiService {
         @Field("admin_id") adminId: Int,
         @Field("role") role: String,
         @Field("channel_id") channelId: Int,
-        @Field("users") userIdsJson: String // Stringified JSON array of user IDs
+        @Field("users") userIdsJson: String
     ): Response<GenericResponse>
 
-    // --- Access Control ---
     @GET("api_user_access.php")
     suspend fun getUserAccessList(
         @Query("admin_id") adminId: Int,
@@ -155,14 +151,12 @@ interface ApiService {
         @Field("permissions") permissionsJson: String
     ): Response<GenericResponse>
 
-    // --- Tracking ---
     @GET("api_get_users.php")
     suspend fun getTrackUnits(
         @Query("admin_id") adminId: Int,
         @Query("role") role: String
     ): Response<List<TrackUnit>>
 
-    // --- Logs ---
     @GET("api_logs.php")
     suspend fun getLogs(
         @Query("admin_id") adminId: Int,
@@ -170,7 +164,6 @@ interface ApiService {
         @Query("category") category: String
     ): Response<List<LogEntry>>
 
-    // --- Admin Panel ---
     @GET("api_admin_panel.php")
     suspend fun getAdminList(): Response<List<Admin>>
 
@@ -205,7 +198,6 @@ interface ApiService {
         @Field("channels[]") channelIds: List<Int>
     ): Response<GenericResponse>
 
-    // --- Settings ---
     @GET("api_settings.php")
     suspend fun getAdminProfile(
         @Query("admin_id") adminId: Int,

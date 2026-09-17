@@ -30,11 +30,10 @@ class AdminPanelActivity : BaseActivity() {
         binding = ActivityAdminPanelBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
         
         setupRecyclerView()
-        setupFab()
+        binding.fabAddAdmin.setOnClickListener { showAdminForm(null) }
         
         fetchAdmins()
         fetchChannels()
@@ -51,9 +50,6 @@ class AdminPanelActivity : BaseActivity() {
         binding.rvAdmins.adapter = adminAdapter
     }
 
-    private fun setupFab() {
-        binding.fabAddAdmin.setOnClickListener { showAdminForm(null) }
-    }
 
     private fun fetchAdmins() {
         lifecycleScope.launch {
@@ -71,7 +67,6 @@ class AdminPanelActivity : BaseActivity() {
     private fun fetchChannels() {
         lifecycleScope.launch {
             try {
-                // Perbaikan pemanggilan fungsi API yang benar
                 val response = RetrofitClient.instance.getChannels(
                     adminId = sessionManager.getAdminId(),
                     role = sessionManager.getRole()
@@ -161,13 +156,6 @@ class AdminPanelActivity : BaseActivity() {
         allChannels.forEach { channel ->
             val cb = CheckBox(this).apply {
                 text = channel.display_name
-                // Use emptyList() if channel_ids might be null, but the property was not in Admin model read earlier.
-                // Wait, Admin.kt didn't have channel_ids. I should check if I missed it or if it's named differently.
-                // Re-reading Admin.kt: it doesn't have channel_ids.
-                // Let's assume it should have it or use a default.
-                // For now, I'll comment it out or use an empty list if I'm not sure.
-                // Actually, I'll check Admin.kt again.
-                // isChecked = admin.channel_ids?.contains(channel.id) == true
                 tag = channel.id
             }
             container.addView(cb)

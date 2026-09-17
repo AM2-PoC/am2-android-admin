@@ -7,7 +7,7 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
+
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -27,12 +27,7 @@ object RetrofitClient {
         check(::appContext.isInitialized) { "RetrofitClient must be initialized from AdminApplication" }
     }
 
-    /*
-     * Persisted as a set, which is safe only because CookieStore guarantees one
-     * entry per (name, domain, path). It did not before: two PHPSESSID cookies
-     * from one login were both kept, and a set has no order to decide which
-     * went out first.
-     */
+    /* CookieStore guarantees one cookie per (name, domain, path) before Set persistence. */
     private val cookieJar = object : CookieJar {
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             requireInitialized()
@@ -47,8 +42,7 @@ object RetrofitClient {
         override fun loadForRequest(url: HttpUrl): List<Cookie> {
             requireInitialized()
             val now = System.currentTimeMillis()
-            // Re-saving here is what prunes what has expired since the last
-            // response; the store is only ever touched on a request or a reply.
+
             val stored = CookieStore.merge(read(url), emptyList(), now)
             write(stored)
             return CookieStore.select(url, stored, now)
@@ -66,15 +60,7 @@ object RetrofitClient {
         val unsafe = request.method in setOf("POST", "PUT", "PATCH", "DELETE")
         val token = if (::sessionManager.isInitialized) sessionManager.csrfToken() else ""
         val builder = request.newBuilder()
-            /*
-             * Say that a JSON refusal can be read.
-             *
-             * am2_csrf_require() writes JSON only when the request says it
-             * accepts JSON, and plain text otherwise. This client never said
-             * so, so a rejected call came back as a body the converter could
-             * not parse -- and the operator was told the feature had failed
-             * rather than that the session had ended.
-             */
+            /* CSRF and auth failures must remain JSON for the Retrofit converter. */
             .header("Accept", "application/json")
         if (unsafe && token.isNotEmpty() && !request.url.encodedPath.endsWith("api_login.php")) {
             builder.header("X-CSRF-Token", token)
@@ -82,23 +68,6 @@ object RetrofitClient {
         chain.proceed(builder.build())
     }
 
-    /**
-     * A session the server has forgotten, told apart from a failed feature.
-     *
-     * Left alone long enough the panel's session is gone, while the app still
-     * holds its cookie and still answers true to isLoggedIn(). am2_api_auth()
-     * then answers 401 -- correctly, and in JSON -- and every screen reported it
-     * as its own feature failing: "GAGAL memperbarui fitur" on a switch that was
-     * never the problem, because nothing read the status.
-     *
-     * 401 only. 403 is am2_api_authz_denied(), which means the session is fine
-     * and this administrator may not do this; signing them out for touching
-     * something outside their rights would be a worse bug than the one being
-     * fixed.
-     *
-     * The credentials are dropped here, at the one place that sees the status,
-     * and the screens are told once so they can ask for a sign-in instead.
-     */
     private val sessionExpiryInterceptor = Interceptor { chain ->
         val response = chain.proceed(chain.request())
         if (response.code == 401 && ::sessionManager.isInitialized
@@ -110,10 +79,6 @@ object RetrofitClient {
         response
     }
 
-    // Never log HTTP headers or bodies: sessions use credential-bearing cookies.
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.NONE
-    }
 
     private fun api(): ApiService {
         requireInitialized()
@@ -123,7 +88,6 @@ object RetrofitClient {
             .cookieJar(cookieJar)
             .addInterceptor(csrfInterceptor)
             .addInterceptor(sessionExpiryInterceptor)
-            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

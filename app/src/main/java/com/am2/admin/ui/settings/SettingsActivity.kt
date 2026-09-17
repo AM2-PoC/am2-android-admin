@@ -40,7 +40,7 @@ import java.io.FileOutputStream
 class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
-    private val currentVersion: String get() = BuildConfig.VERSION_NAME
+
     private val updateClient = OkHttpClient.Builder()
         .followRedirects(false)
         .followSslRedirects(false)
@@ -61,7 +61,7 @@ class SettingsActivity : BaseActivity() {
 
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
         
-        binding.tvCurrentVersion.text = "Versi Saat Ini: $currentVersion"
+        binding.tvCurrentVersion.text = "Versi Saat Ini: ${BuildConfig.VERSION_NAME}"
         fetchSettings()
 
         binding.btnUpdatePassword.setOnClickListener {
@@ -100,21 +100,7 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun checkUpdate() {
-        /*
-         * Nothing is offered that this build could not install.
-         *
-         * SELF_UPDATE_ENABLED is the first line of UpdateVerifier.verify(), so
-         * a build without it refuses before looking at the file. This screen
-         * checked anyway: it offered the update, downloaded the whole APK, and
-         * reported "identitas APK tidak valid" -- about an APK whose identity
-         * was correct. The build was simply not permitted to install anything,
-         * and said so by blaming the artifact.
-         *
-         * It surfaced only once the staging channel started answering. Before
-         * that the check threw "metadata update tidak tersedia" and the dialog
-         * was never reached, so a path that had always been broken looked like
-         * a path that worked.
-         */
+
         if (!BuildConfig.SELF_UPDATE_ENABLED) {
             Toast.makeText(
                 this,
@@ -163,12 +149,7 @@ class SettingsActivity : BaseActivity() {
                         val body = response.body ?: throw IllegalStateException("APK kosong")
                         destination.outputStream().use { output -> body.byteStream().copyTo(output) }
                     }
-                    /*
-                     * The reason, not a verdict. Ten checks used to arrive here
-                     * as one sentence about identity, and build 57 refused
-                     * build 63 with it -- about an APK whose identity was
-                     * correct and whose signature had simply never been read.
-                     */
+
                     val outcome = UpdateVerifier.check(
                         destination, metadata, installedVersionCode(), packageManager)
                     if (outcome is UpdateCheck.Refused) {
@@ -229,17 +210,8 @@ class SettingsActivity : BaseActivity() {
                 if (response.isSuccessful) {
                     response.body()?.let { profile ->
                         binding.tvUsername.text = "Username: ${profile.username}"
-                        // profile.total_users and other fields might be missing in AdminProfile
-                        // I need to check AdminProfile.kt again.
-                        // I read it as: username, role, user_quota, channel_quota, used_user_quota, used_channel_quota, can_manage_maps, can_manage_p2p, can_manage_video
-                        // So total_users, total_channels, total_admins are missing.
-                        
-                        // binding.tvTotalUsers.text = profile.total_users.toString()
-                        // binding.tvTotalChannels.text = profile.total_channels.toString()
-                        
                         if (sessionManager.getRole() == "superadmin") {
                             binding.layoutAdminStat.visibility = View.VISIBLE
-                            // binding.tvTotalAdmins.text = profile.total_admins.toString()
                             binding.tvUserQuota.text = "UNLIMITED"
                             binding.tvChannelQuota.text = "UNLIMITED"
                         } else {
@@ -247,7 +219,7 @@ class SettingsActivity : BaseActivity() {
                             binding.tvChannelQuota.text = profile.channel_quota.toString()
                         }
 
-                        binding.tvExpiry.text = "LIFETIME ACCESS" // Assuming for now
+                        binding.tvExpiry.text = "LIFETIME ACCESS"
                         setupFeaturesList(profile.can_manage_maps, profile.can_manage_p2p, profile.can_manage_video)
                     }
                 }
