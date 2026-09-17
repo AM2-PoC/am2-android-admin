@@ -26,7 +26,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/write_update_manifest.py"
 NOTES = ROOT / "app/release-notes.json"
 
-# From WebAdmin/admin_update_validation.php, am2_validate_signed_update_set().
 SERVER_REQUIRES = {
     "package", "version_code", "version_name", "update_url",
     "sha256", "signer_sha256", "source_commit", "rollout",
@@ -93,10 +92,7 @@ class WriteUpdateManifestTest(unittest.TestCase):
         )
 
     def test_version_code_is_an_integer_not_the_string_aapt_printed(self):
-        # The validator uses is_int(). A version code that arrives as "412"
-        # compares equal to 412 under PHP's loose rules but fails the strict
-        # check, which is deliberate: it means the manifest was typed, not
-        # generated.
+
         _, out = self.build()
         raw = json.loads(out.read_text())
         self.assertIsInstance(raw["version_code"], int)

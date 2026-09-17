@@ -26,10 +26,6 @@ import re
 import sys
 from pathlib import Path
 
-# The exact key set WebAdmin/admin_update_validation.php requires, sorted. It
-# compares key sets rather than reading the fields it knows, so one extra or one
-# missing field refuses the whole manifest with "manifest key set is not exact".
-# changelog sits outside it: free text that no decision depends on.
 REQUIRED_KEYS = sorted([
     "package", "version_code", "version_name", "update_url",
     "sha256", "signer_sha256", "source_commit", "rollout",
@@ -121,16 +117,12 @@ def main() -> int:
         "package": apk["name"],
         "version_code": int(apk["versionCode"]),
         "version_name": apk["versionName"],
-        # The server rebuilds this same string from its own configured base and
-        # refuses anything else, so it is not a free choice -- it is the one URL
-        # that host will serve, spelled the way that host spells it.
+
         "update_url": f"{base}/admin.apk",
         "sha256": hashlib.sha256(args.apk.read_bytes()).hexdigest(),
         "signer_sha256": signer_digest(args.signer),
         "source_commit": source_commit(args.build_metadata),
-        # Staged rollout is not wired up on either end yet. The field exists
-        # because the validator requires it; 100 is the only honest value while
-        # nothing can act on anything else.
+
         "rollout": 100,
         "changelog": release_notes(args.release_notes),
     }

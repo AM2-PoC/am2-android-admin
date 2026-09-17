@@ -36,7 +36,6 @@ class UsersActivity : BaseActivity() {
         binding = ActivityUsersBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupRecyclerView()
@@ -68,7 +67,6 @@ class UsersActivity : BaseActivity() {
                     role = sessionManager.getRole()
                 )
                 if (response.isSuccessful) {
-                    // Gunakan distinctBy untuk menghindari channel ganda dari API
                     allChannels = response.body()?.distinctBy { it.id } ?: emptyList()
                 }
             } catch (e: Exception) {
@@ -188,23 +186,7 @@ class UsersActivity : BaseActivity() {
                     value = value
                 )
                 if (!response.isSuccessful || response.body()?.success != true) {
-                    /*
-                     * Say what the server said.
-                     *
-                     * This showed one sentence for every refusal, and the
-                     * server's own explanation was thrown away. A switch
-                     * refused because the administrator lacks that right, a
-                     * value the server did not recognise, and a database error
-                     * all read as "Gagal memperbarui fitur" -- and none of them
-                     * are, so nothing on screen pointed anywhere useful. Every
-                     * refusal recorded on the panel so far was "Akses ditolak",
-                     * which nobody was ever shown.
-                     *
-                     * These arrive as 200 with success=false, deliberately: a
-                     * refusal is not an expired session, and giving them a 4xx
-                     * would sign an administrator out for touching something
-                     * outside their rights.
-                     */
+
                     val reason = response.body()?.message ?: "Gagal memperbarui fitur"
                     Toast.makeText(this@UsersActivity, reason, Toast.LENGTH_LONG).show()
                     fetchUsers() 

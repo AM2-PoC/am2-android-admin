@@ -34,11 +34,7 @@ class AdminAdapter(
             binding.apply {
                 tvAdminUsername.text = admin.username
                 tvRole.text = "ROLE: ${admin.role.uppercase()}"
-                
-                // Note: The model 'Admin' doesn't seem to have 'current_status' based on the file I read earlier.
-                // Re-checking Admin.kt
-                // tvStatus.text = admin.current_status.uppercase()
-                
+
                 if (admin.role == "superadmin") {
                     tvQuota.text = "Kuota: UNLIMITED"
                     btnDelete.visibility = android.view.View.GONE

@@ -139,12 +139,7 @@ android {
     }
 
     signingConfigs {
-        /*
-         * staging is a product flavour on the *debug* build type, so
-         * assembleStagingDebug signs with this one. Overriding the existing
-         * debug config rather than inventing a `staging` build type: a fourth
-         * build type would be one nobody assembles.
-         */
+
         if (stagingSigningConfigured) {
             getByName("debug") {
                 storeFile = file(stagingSigningProps.getValue("AM2_STAGING_KEYSTORE_FILE")!!)
@@ -195,19 +190,15 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     
-    // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
     
-    // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     
-    // UI & Charts
     implementation(libs.mpandroidchart)
     
-    // OpenStreetMap (Alternative to Google Maps)
     implementation(libs.osmdroid)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.androidx.security.crypto)

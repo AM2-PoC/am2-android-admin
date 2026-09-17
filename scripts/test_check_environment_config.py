@@ -37,10 +37,7 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertNotIn('EXPECTED_PACKAGE = "com.am2.admin"', verifier)
 
     def test_no_source_file_hardcodes_an_endpoint(self):
-        # The rule is that no file carries an endpoint of its own, so check it
-        # by absence across the tree. Naming a BuildConfig field that had to
-        # appear inside one screen made the policy fail when that screen
-        # legitimately stopped addressing the network at all.
+
         offenders = sorted(
             path.relative_to(ROOT).as_posix()
             for path in (ROOT / "app/src/main/java").rglob("*.kt")
@@ -49,10 +46,7 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertEqual([], offenders)
 
     def test_the_published_url_matches_the_url_the_app_asks_for(self):
-        # The manifest names a download URL and the server refuses anything but
-        # its own base plus /admin.apk. The app, separately, has the same URL
-        # compiled in as UPDATE_APK_URL. Three places, one string, and nothing
-        # made them agree -- so this does.
+
         gradle = GRADLE.read_text()
         workflow = WORKFLOW.read_text()
         for base in re.findall(r"--update-base\s+(\S+)", workflow):
@@ -77,11 +71,7 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("am2-admin-staging-debug-${{ github.sha }}", text)
         self.assertIn("retention-days: 3", text)
         staging_job = text[text.index("name: staging-artifact"):text.index("name: release-artifact")]
-        # The boundary is the production *key*, not the property name. Staging
-        # has to tell its own build which signer to trust -- without that,
-        # UpdateVerifier refuses every update it is offered on a length check --
-        # and the digest it passes is read from the staging keystore. What must
-        # never cross is the upload key's digest, which lives in vars.
+
         self.assertNotIn(
             "vars.AM2_APPROVED_SIGNER_SHA256", staging_job,
             "the production signer reaches the staging lane, so a staging build "

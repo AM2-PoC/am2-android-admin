@@ -44,7 +44,7 @@ class SessionLifecycleContractTest(unittest.TestCase):
         self.client = code(CLIENT.read_text(encoding="utf-8"))
 
     def test_signing_out_is_durable_before_the_task_ends(self):
-        # Whether it is a block or a single expression.
+
         logout = self.session[self.session.index("fun logout("):]
         cut = min(x for x in (logout.find("\n    }"), logout.find("\n    fun "), len(logout))
                   if x > 0)
@@ -60,7 +60,7 @@ class SessionLifecycleContractTest(unittest.TestCase):
         )
 
     def test_a_failed_sign_out_does_not_pretend_to_have_worked(self):
-        # The answer has to be read, whichever way round it is written.
+
         self.assertRegex(
             self.base,
             r"(if|when)\s*\(\s*!?\s*sessionManager\.logout\(\)|"
@@ -87,9 +87,7 @@ class SessionLifecycleContractTest(unittest.TestCase):
             self.client, r"response\.code\s*==\s*401",
             "nothing notices the status the server uses to say the session is gone",
         )
-        # 403 is am2_api_authz_denied(): the session is fine and this
-        # administrator may not do this. Signing them out for it would be a
-        # worse bug than the one being fixed.
+
         self.assertNotRegex(
             self.client, r"response\.code\s*==\s*403",
             "a permission denial signs the administrator out",
@@ -98,8 +96,7 @@ class SessionLifecycleContractTest(unittest.TestCase):
             self.client, r"(sessionExpired|SessionExpiry|onSessionExpired)",
             "a 403 is not turned into anything the screens can act on",
         )
-        # And something must actually listen, from every screen, or the
-        # announcement is a fix nobody hears.
+
         self.assertRegex(
             self.base,
             r"override fun onCreate[\s\S]{0,300}?observeSessionExpiry\(\)",

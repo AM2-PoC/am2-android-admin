@@ -37,14 +37,12 @@ class LiveTrackActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
 
-        // OSMDroid configuration
         val ctx = applicationContext
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
 
         binding = ActivityLiveTrackBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupMap()
@@ -143,14 +141,12 @@ class LiveTrackActivity : BaseActivity() {
             val position = GeoPoint(unit.lat, unit.lng)
             val isSpeaking = unit.is_speaking == 1
 
-            // Perbarui ikon jika status TX berubah atau marker baru
             val marker = markers[unit.id]
             if (marker != null) {
                 marker.position = position
                 marker.title = unit.name
                 marker.subDescription = "Channel: ${unit.channel_name}"
 
-                // Cek apakah status bicara berubah untuk update ikon
                 val wasSpeaking = marker.relatedObject as? Boolean ?: false
                 if (wasSpeaking != isSpeaking) {
                     marker.icon = createCustomMarker(unit.name, isSpeaking)
@@ -162,7 +158,7 @@ class LiveTrackActivity : BaseActivity() {
                     this.title = unit.name
                     this.icon = createCustomMarker(unit.name, isSpeaking)
                     this.subDescription = "Channel: ${unit.channel_name}"
-                    this.relatedObject = isSpeaking // Simpan status TX di relatedObject
+                    this.relatedObject = isSpeaking
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 }
                 markers[unit.id] = newMarker

@@ -40,7 +40,6 @@ class UserAccessActivity : BaseActivity() {
         binding = ActivityUserAccessBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupRecyclerView()
@@ -98,7 +97,6 @@ class UserAccessActivity : BaseActivity() {
                     role = sessionManager.getRole()
                 )
                 if (response.isSuccessful) {
-                    // Gunakan distinctBy untuk menghindari channel ganda dari API pada Admin Native
                     allChannels = response.body()?.distinctBy { it.id } ?: emptyList()
                 }
             } catch (e: Exception) {

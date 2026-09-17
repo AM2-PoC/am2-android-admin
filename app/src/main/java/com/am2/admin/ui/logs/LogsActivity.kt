@@ -22,7 +22,6 @@ class LogsActivity : BaseActivity() {
         binding = ActivityLogsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupRecyclerView()
