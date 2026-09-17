@@ -79,7 +79,6 @@ class ChannelsActivity : BaseActivity() {
                     allChannels = response.body() ?: emptyList()
                     channelAdapter.updateData(allChannels)
                     
-                    // Update stats like Website
                     val ownedCount = allChannels.count { it.creator_name == sessionManager.getUsername() || it.creator_name == "System" }
                     binding.tvOwnedCount.text = ownedCount.toString()
                 }
@@ -191,7 +190,6 @@ class ChannelsActivity : BaseActivity() {
             adapter = selectionAdapter
         }
 
-        // Fetch current access
         lifecycleScope.launch {
             try {
                 val resp = RetrofitClient.instance.getChannelUsersAccess(channelId = channel.id)

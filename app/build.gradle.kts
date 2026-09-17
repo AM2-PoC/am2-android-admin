@@ -8,7 +8,6 @@ plugins {
 
 val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
 
-/** CI supplies a positive version code; local builds default to 1. */
 val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
     .map { property ->
         val parsed = property.trim().toIntOrNull()
@@ -17,7 +16,6 @@ val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
     }
     .orElse(1)
 
-/* The release version is shared through version.properties; CI may override it. */
 val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
     .orElse(
         providers.provider {
@@ -33,8 +31,6 @@ val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
         }
     )
 
-/* Append the CI build number as SemVer build metadata. */
-/* Release signing is optional, but partial configuration is rejected. */
 val signingProps: Map<String, String?> = listOf(
     "AM2_KEYSTORE_FILE",
     "AM2_KEYSTORE_PASSWORD",
@@ -119,12 +115,7 @@ android {
         }
         create("production") {
             dimension = "environment"
-            /*
-             * Build metadata on the production lane too, which a Play-listed app
-             * would not do. This one is sideload-only -- the Play listing belongs
-             * to the Client alone -- so there is no store page to keep tidy, and
-             * every APK that reaches a handset should be able to name itself.
-             */
+
             versionNameSuffix = "+${buildVersionCode.get()}"
             buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/", "webadmin.am2-poc.com")))
@@ -160,9 +151,7 @@ android {
 
     buildTypes {
         release {
-            // Null when unconfigured, which leaves the artifact unsigned --
-            // the deliberate behaviour for a developer machine. It is never the
-            // debug config, because that would install and look like a release.
+
             signingConfig = if (signingConfigured) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(

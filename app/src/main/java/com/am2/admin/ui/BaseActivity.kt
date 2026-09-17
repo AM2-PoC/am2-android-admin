@@ -85,7 +85,7 @@ abstract class BaseActivity : AppCompatActivity() {
                     try {
                         RetrofitClient.instance.logout()
                     } finally {
-                        // Persist logout before clearing the activity stack.
+
                         if (!sessionManager.logout()) {
                             Toast.makeText(
                                 this@BaseActivity,
@@ -118,7 +118,6 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    /** The login screen, in a task of its own, with nothing left behind it. */
     protected fun goToLogin() {
         startActivity(
             Intent(this, LoginActivity::class.java).apply {

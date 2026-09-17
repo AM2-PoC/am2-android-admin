@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""Write the update manifest the panel serves, from the APK that was just built.
 
-There was never anything that wrote this file. It was typed by hand, and it
-held three fields -- version_name, download_url, changelog -- while the server
-had grown to require eight and to check every one of them against the bytes on
-disk. So api_settings.php?action=check_update answered 404 with a null version
-to every handset that asked, the panel went on announcing 1.1.0-staging from
-the same file, and the admin update channel was dead for weeks with nothing
-saying so.
-
-Everything the manifest needs is already produced by the build that made the
-APK: aapt records the package and both versions, apksigner records the signing
-certificate, the workflow records the commit. This assembles them. Nothing here
-is a value somebody chose while writing it down.
-
-The digest is computed from the APK rather than read from the SHA256SUMS file
-beside it -- the two lanes name that file differently, and a digest that came
-from anywhere other than the bytes being published is not a digest worth
-publishing.
-"""
 import argparse
 import hashlib
 import json

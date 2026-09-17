@@ -146,7 +146,6 @@ class UserAccessActivity : BaseActivity() {
                 val stringKeysMap = permissions.mapKeys { it.key.toString() }
                 val permsJson = JSONObject(stringKeysMap).toString()
                 
-                // Pastikan mengirim admin_id untuk log aktivitas
                 val response = RetrofitClient.instance.updateUserAccess(
                     adminId = sessionManager.getAdminId(),
                     userId = userId,

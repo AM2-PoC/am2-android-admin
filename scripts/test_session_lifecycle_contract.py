@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""Signing out ends the session, and an ended session is recognised as one.
 
-Two faults on the same path, reported from the field as "GAGAL memperbarui
-fitur" after the app had been left alone for a few hours.
-
-The server keeps a PHP session for session.gc_maxlifetime, which is 1440
-seconds. After that it is gone. The app still holds the cookie and the CSRF
-token in its preferences, still answers true to isLoggedIn(), and sends both.
-am2_csrf_require() then finds no stored token, answers 403, and writes plain
-text unless the request said it accepts JSON -- which this client never did. So
-Retrofit could not parse the refusal either, and every switch the operator
-touched failed with a message about the feature rather than about the session.
-
-And signing out was not durable:
-
-    fun logout() { prefs.edit().clear().apply() }
-
-apply() writes in the background, and the next line finished the task. A write
-that had not landed left the session behind, so an administrator who signed out
-was still signed in at the next launch. The client app fought exactly this and
-settled it with commit() plus a caller that refuses to move on when the write
-fails.
-"""
 import re
 import unittest
 from pathlib import Path

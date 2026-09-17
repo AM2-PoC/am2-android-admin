@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-"""The manifest has to be one the server will actually accept.
 
-WebAdmin/admin_update_validation.php compares key sets rather than reading the
-fields it knows: one extra field or one missing field refuses the whole
-manifest with "manifest key set is not exact", and the handset is told there is
-no update. Nothing on either side says which field was wrong.
-
-That is how the channel died in the first place. The file was written by hand
-with three fields while the server had grown to require eight, so every check
-answered 404 for weeks while the panel kept announcing a version from the same
-file.
-
-The key set below is therefore a copy of a contract that lives in another
-repository. It is written out in full, deliberately, so that a change there
-fails here by name instead of failing silently on a handset.
-"""
 import json
 import subprocess
 import sys

@@ -264,9 +264,7 @@ class UsersActivity : BaseActivity() {
                     Toast.makeText(this@UsersActivity, "User berhasil ditambahkan", Toast.LENGTH_SHORT).show()
                     fetchUsers()
                 } else {
-                    // There was no else at all: a refused registration -- a
-                    // duplicate id is the common one -- closed the dialogue and
-                    // said nothing, and the user simply was not there.
+
                     val reason = response.body()?.message ?: "Gagal menambahkan user"
                     Toast.makeText(this@UsersActivity, reason, Toast.LENGTH_LONG).show()
                 }

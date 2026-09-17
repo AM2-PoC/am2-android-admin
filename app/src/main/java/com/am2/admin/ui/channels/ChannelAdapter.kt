@@ -35,7 +35,6 @@ class ChannelAdapter(
                 tvChannelName.text = channel.display_name
                 tvChannelId.text = channel.name
                 
-                // Button Manage Access with count
                 btnManageAccess.text = "${channel.total_access} User"
                 btnManageAccess.setOnClickListener { onManageAccess(channel) }
                 

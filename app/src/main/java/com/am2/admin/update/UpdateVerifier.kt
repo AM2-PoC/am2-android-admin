@@ -12,7 +12,6 @@ import java.security.MessageDigest
 sealed class UpdateCheck {
     object Ok : UpdateCheck()
 
-    /** [reason] is a stable identifier, not a sentence: it goes in bug reports. */
     data class Refused(val reason: String) : UpdateCheck()
 }
 

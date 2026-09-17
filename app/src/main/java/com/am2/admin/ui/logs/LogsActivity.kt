@@ -72,7 +72,7 @@ class LogsActivity : BaseActivity() {
                     response.body()?.let { logAdapter.updateData(it) }
                 }
             } catch (e: Exception) {
-                // Silently handle errors for background sync
+
             }
         }
     }
