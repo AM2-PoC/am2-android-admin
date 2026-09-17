@@ -15,10 +15,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.am2.admin.R
 import com.am2.admin.data.api.RetrofitClient
 import com.am2.admin.data.model.TrackUnit
-import com.am2.admin.data.pref.SessionManager
+
 import com.am2.admin.databinding.ActivityLiveTrackBinding
 import com.am2.admin.ui.BaseActivity
-import kotlinx.coroutines.Job
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -31,21 +31,18 @@ class LiveTrackActivity : BaseActivity() {
     private lateinit var binding: ActivityLiveTrackBinding
     private val markers = mutableMapOf<String, Marker>()
     private lateinit var trackAdapter: TrackUnitAdapter
-    private var syncJob: Job? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        sessionManager = SessionManager(this)
 
-        // OSMDroid configuration
         val ctx = applicationContext
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
 
         binding = ActivityLiveTrackBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Sidebar dengan tombol tiga garis menggunakan BaseActivity
         setupDrawer(binding.drawerLayout, binding.navView, binding.toolbar)
 
         setupMap()
@@ -77,7 +74,7 @@ class LiveTrackActivity : BaseActivity() {
     }
 
     private fun startAutoRefresh() {
-        syncJob = lifecycleScope.launch {
+        lifecycleScope.launch {
             while (true) {
                 fetchTrackData()
                 delay(2000)
@@ -144,14 +141,12 @@ class LiveTrackActivity : BaseActivity() {
             val position = GeoPoint(unit.lat, unit.lng)
             val isSpeaking = unit.is_speaking == 1
 
-            // Perbarui ikon jika status TX berubah atau marker baru
             val marker = markers[unit.id]
             if (marker != null) {
                 marker.position = position
                 marker.title = unit.name
                 marker.subDescription = "Channel: ${unit.channel_name}"
 
-                // Cek apakah status bicara berubah untuk update ikon
                 val wasSpeaking = marker.relatedObject as? Boolean ?: false
                 if (wasSpeaking != isSpeaking) {
                     marker.icon = createCustomMarker(unit.name, isSpeaking)
@@ -163,7 +158,7 @@ class LiveTrackActivity : BaseActivity() {
                     this.title = unit.name
                     this.icon = createCustomMarker(unit.name, isSpeaking)
                     this.subDescription = "Channel: ${unit.channel_name}"
-                    this.relatedObject = isSpeaking // Simpan status TX di relatedObject
+                    this.relatedObject = isSpeaking
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 }
                 markers[unit.id] = newMarker
@@ -183,8 +178,4 @@ class LiveTrackActivity : BaseActivity() {
         binding.map.onPause()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        syncJob?.cancel()
-    }
 }

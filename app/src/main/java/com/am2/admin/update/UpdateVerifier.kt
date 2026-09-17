@@ -9,23 +9,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
 
-/**
- * Whether a downloaded APK may be installed, and when not, which check said so.
- *
- * Build 57 refused build 63 with "identitas APK tidak valid" about an APK whose
- * identity was correct. Ten checks answered with one Boolean and the screen
- * rendered it as one sentence, so a signature that was never read looked
- * exactly like a signature that did not match.
- *
- * This screen already carries a comment about that shape from the last time it
- * happened for a different reason -- an update refused by its own build
- * settings, reported as a bad artifact. Naming the refusal is the fix for the
- * class, not for one instance of it.
- */
 sealed class UpdateCheck {
     object Ok : UpdateCheck()
 
-    /** [reason] is a stable identifier, not a sentence: it goes in bug reports. */
     data class Refused(val reason: String) : UpdateCheck()
 }
 
@@ -135,12 +121,6 @@ object UpdateVerifier {
         return archive.signatures?.toList().orEmpty()
     }
 
-    fun verify(
-        file: File,
-        metadata: UpdateMetadata,
-        installedVersionCode: Long,
-        packageManager: PackageManager,
-    ): Boolean = check(file, metadata, installedVersionCode, packageManager) is UpdateCheck.Ok
 
     fun sha256(file: File): String = FileInputStream(file).use { input ->
         val digest = MessageDigest.getInstance("SHA-256")

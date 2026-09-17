@@ -8,17 +8,6 @@ plugins {
 
 val approvedSigner = providers.gradleProperty("AM2_APPROVED_SIGNER_SHA256").orElse("")
 
-/**
- * The build's identity, supplied by CI as its run number.
- *
- * This was the literal 2 in every Admin APK ever produced. The device decides
- * an update exists by comparing version codes, so an unchanging one makes the
- * channel permanently answer "already current" -- and leaves neither end able
- * to name the build actually installed.
- *
- * A local build keeps a low number, so a developer APK can never look newer
- * than a published one and is never offered to a field device.
- */
 val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
     .map { property ->
         val parsed = property.trim().toIntOrNull()
@@ -27,14 +16,6 @@ val buildVersionCode = providers.gradleProperty("AM2_VERSION_CODE")
     }
     .orElse(1)
 
-/*
- * The marketing version, read from version.properties rather than written here.
- *
- * CI has to know this string to write the update manifest the panel serves, and
- * a quoted literal inside a build script is not something another job can read.
- * -PAM2_VERSION_NAME overrides it, which is how a one-off build names itself
- * without a commit.
- */
 val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
     .orElse(
         providers.provider {
@@ -50,33 +31,6 @@ val buildVersionName = providers.gradleProperty("AM2_VERSION_NAME")
         }
     )
 
-/*
- * The build, appended to the version name as Semantic Versioning build metadata.
- *
- * version.properties holds "1.1.0" and a human leaves it there for a release or
- * ten, so two builds of one release read identically and an operator reading a
- * version off a handset cannot say which is which.
- *
- * Semver puts exactly this after a '+': it identifies the artifact and MUST be
- * ignored when comparing versions. The alternative -- folding the build into the
- * PATCH component, 1.1.52 -- claims fifty-two backward compatible bug fixes,
- * because that is what that component means. Nothing here parses the string
- * anyway: the handset compares versionCode, and versionName is only ever shown.
- */
-/*
- * Release signing material, supplied from outside the repository.
- *
- * Absent by default: a developer without the key still builds and runs. What
- * must not happen is *half* present. Hand Gradle a keystore path with no
- * password and it attaches no signing config at all, so the release artifact
- * comes out signed with the debug key -- it builds, it installs, and it is not
- * a release. Nothing in the output says otherwise.
- *
- * The check runs at configuration time, so a half-configured machine fails
- * every Gradle invocation rather than only the release task. The wrong state
- * should be loud where it is set, not discovered later in an artifact that has
- * already shipped.
- */
 val signingProps: Map<String, String?> = listOf(
     "AM2_KEYSTORE_FILE",
     "AM2_KEYSTORE_PASSWORD",
@@ -91,23 +45,7 @@ require(signingConfigured || signingProps.values.all { it == null }) {
         signingProps.filterValues { it == null }.keys.joinToString(", ")
 }
 
-/*
- * The staging key, which is a different key on purpose.
- *
- * Android permits an install over an existing app only when the new package
- * carries the same signature. It does not care whether the key is called debug
- * or release -- a debug keystore holds a real private key. What matters is
- * continuity, and this module has never had any: every APK is built on a runner
- * that generates a debug key and discards it, so no Admin build can be
- * installed over the one before it and each round of field testing costs an
- * operator their local state.
- *
- * Separate from the release key because this one has to live in CI to be of any
- * use, and the upload key must not. Collapsing them would put the app's
- * permanent Play identity on every runner that builds a staging APK. Losing the
- * upload key is recoverable through Play; losing signature continuity for every
- * sideloaded handset is not.
- */
+/* Staging uses a persistent key distinct from the production signing key. */
 val stagingSigningProps: Map<String, String?> = listOf(
     "AM2_STAGING_KEYSTORE_FILE",
     "AM2_STAGING_KEYSTORE_PASSWORD",
@@ -177,12 +115,7 @@ android {
         }
         create("production") {
             dimension = "environment"
-            /*
-             * Build metadata on the production lane too, which a Play-listed app
-             * would not do. This one is sideload-only -- the Play listing belongs
-             * to the Client alone -- so there is no store page to keep tidy, and
-             * every APK that reaches a handset should be able to name itself.
-             */
+
             versionNameSuffix = "+${buildVersionCode.get()}"
             buildConfigField("Boolean", "SELF_UPDATE_ENABLED", "true")
             buildConfigField("String", "BASE_URL", quotedBuildConfig(validateEndpoint("production", "https://webadmin.am2-poc.com/", "webadmin.am2-poc.com")))
@@ -197,12 +130,7 @@ android {
     }
 
     signingConfigs {
-        /*
-         * staging is a product flavour on the *debug* build type, so
-         * assembleStagingDebug signs with this one. Overriding the existing
-         * debug config rather than inventing a `staging` build type: a fourth
-         * build type would be one nobody assembles.
-         */
+
         if (stagingSigningConfigured) {
             getByName("debug") {
                 storeFile = file(stagingSigningProps.getValue("AM2_STAGING_KEYSTORE_FILE")!!)
@@ -223,9 +151,7 @@ android {
 
     buildTypes {
         release {
-            // Null when unconfigured, which leaves the artifact unsigned --
-            // the deliberate behaviour for a developer machine. It is never the
-            // debug config, because that would install and look like a release.
+
             signingConfig = if (signingConfigured) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(
@@ -253,27 +179,20 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     
-    // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
-    implementation(libs.okhttp.logging)
+    implementation(libs.okhttp)
     
-    // Lifecycle
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     
-    // UI & Charts
     implementation(libs.mpandroidchart)
-    implementation(libs.glide)
     
-    // OpenStreetMap (Alternative to Google Maps)
     implementation(libs.osmdroid)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.androidx.security.crypto)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
 
 val checkLogPolicy by tasks.registering(Exec::class) {

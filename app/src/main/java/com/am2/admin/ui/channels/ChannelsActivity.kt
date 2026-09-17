@@ -79,7 +79,6 @@ class ChannelsActivity : BaseActivity() {
                     allChannels = response.body() ?: emptyList()
                     channelAdapter.updateData(allChannels)
                     
-                    // Update stats like Website
                     val ownedCount = allChannels.count { it.creator_name == sessionManager.getUsername() || it.creator_name == "System" }
                     binding.tvOwnedCount.text = ownedCount.toString()
                 }
@@ -174,18 +173,16 @@ class ChannelsActivity : BaseActivity() {
 
         tvTarget.text = channel.display_name
         
-        val selectionAdapter = UserSelectionAdapter(allUsers) { selectedCount ->
-            cbSelectAll.setOnCheckedChangeListener(null)
+        var syncingSelectAll = false
+        lateinit var selectionAdapter: UserSelectionAdapter
+        selectionAdapter = UserSelectionAdapter(allUsers) { selectedCount ->
+            syncingSelectAll = true
             cbSelectAll.isChecked = selectedCount > 0 && selectedCount == allUsers.size
-            cbSelectAll.setOnCheckedChangeListener { _, isChecked ->
-                // This line will be reached after the lambda is called, and selectionAdapter is defined.
-                // Wait, recursion? No, UserSelectionAdapter is already constructed here.
-            }
+            syncingSelectAll = false
         }
-        
-        // Fix the reference in the listener
+
         cbSelectAll.setOnCheckedChangeListener { _, isChecked ->
-            selectionAdapter.selectAll(isChecked)
+            if (!syncingSelectAll) selectionAdapter.selectAll(isChecked)
         }
 
         rvUsers.apply {
@@ -193,7 +190,6 @@ class ChannelsActivity : BaseActivity() {
             adapter = selectionAdapter
         }
 
-        // Fetch current access
         lifecycleScope.launch {
             try {
                 val resp = RetrofitClient.instance.getChannelUsersAccess(channelId = channel.id)
@@ -201,11 +197,9 @@ class ChannelsActivity : BaseActivity() {
                     val assignedUserIds = resp.body() ?: emptyList()
                     selectionAdapter.setSelectedIds(assignedUserIds)
                     
-                    cbSelectAll.setOnCheckedChangeListener(null)
+                    syncingSelectAll = true
                     cbSelectAll.isChecked = assignedUserIds.size == allUsers.size && allUsers.isNotEmpty()
-                    cbSelectAll.setOnCheckedChangeListener { _, isChecked ->
-                        selectionAdapter.selectAll(isChecked)
-                    }
+                    syncingSelectAll = false
                 }
             } catch (e: Exception) { }
         }

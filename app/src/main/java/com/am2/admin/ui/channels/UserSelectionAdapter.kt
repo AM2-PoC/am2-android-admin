@@ -13,10 +13,6 @@ class UserSelectionAdapter(
 
     private val selectedIds = mutableSetOf<String>()
 
-    fun updateData(newUsers: List<User>) {
-        users = newUsers
-        notifyDataSetChanged()
-    }
 
     fun setSelectedIds(ids: List<String>) {
         selectedIds.clear()
@@ -52,7 +48,6 @@ class UserSelectionAdapter(
             binding.tvUserName.text = user.name
             binding.tvUserId.text = "#${user.id}"
             
-            // Hide spinner to match Website (it only uses checkboxes in channel access modal)
             binding.spinnerPermission.visibility = android.view.View.GONE
 
             binding.checkbox.setOnCheckedChangeListener(null)
