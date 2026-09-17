@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""A refused update names the check that refused it, and reads the right API.
-
-Build 57 refused build 63 with "identitas APK tidak valid" about an APK whose
-identity was correct. Two faults, both already fixed once in the field client
-and never carried across:
-
-    val flags = GET_SIGNING_CERTIFICATES or GET_SIGNATURES
-    ...
-    val signingInfo = archive.signingInfo ?: return false      // API >= P
-    archive.signatures?.toList().orEmpty()                     // API < P
-
-GET_SIGNATURES reads the v1 JAR signature. The admin APK the staging channel
-serves has no v1 signature at all -- META-INF holds no .RSA, only the v2/v3
-signing block -- so on API 24 to 27, which minSdk 24 admits, that branch finds
-nothing and the update is refused however correct the certificate is. Above P a
-null signingInfo returns outright, ignoring the signatures flag that was asked
-for on the same line.
-
-And ten different checks answered with one Boolean, which the screen rendered
-as one sentence. This screen already carries a comment about that exact shape
-from the last time it happened for a different reason: an update refused for
-its own build settings, reported as a bad artifact.
-"""
+"""Update refusals expose stable reasons and support v2/v3 signers on API 24+."""
 import re
 import unittest
 from pathlib import Path
