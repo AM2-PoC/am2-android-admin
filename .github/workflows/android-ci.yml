@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags: ["admin/v*"]
   schedule:
     - cron: "47 18 * * *"
   workflow_dispatch:
@@ -230,7 +230,7 @@ jobs:
     # line that looked like a guard. Conditions are read from the workflow file
     # at the commit being run, and that does not depend on the plan.
     if: >-
-      startsWith(github.ref, 'refs/tags/v')
+      startsWith(github.ref, 'refs/tags/admin/v')
       || (github.event_name == 'workflow_dispatch'
           && github.event.inputs.lane == 'release'
           && github.ref == 'refs/heads/main')
