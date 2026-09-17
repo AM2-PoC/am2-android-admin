@@ -183,7 +183,6 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
     
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     
     implementation(libs.mpandroidchart)
