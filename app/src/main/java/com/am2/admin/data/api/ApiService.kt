@@ -113,7 +113,7 @@ interface ApiService {
     suspend fun getChannelUsersAccess(
         @Query("action") action: String = "get_users_access",
         @Query("channel_id") channelId: Int
-    ): Response<List<String>> // Returns list of user_ids
+    ): Response<List<String>>
 
     @FormUrlEncoded
     @POST("api_channels.php")
@@ -122,7 +122,7 @@ interface ApiService {
         @Field("admin_id") adminId: Int,
         @Field("role") role: String,
         @Field("channel_id") channelId: Int,
-        @Field("users") userIdsJson: String // Stringified JSON array of user IDs
+        @Field("users") userIdsJson: String
     ): Response<GenericResponse>
 
     @GET("api_user_access.php")

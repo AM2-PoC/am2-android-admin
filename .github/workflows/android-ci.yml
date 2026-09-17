@@ -124,11 +124,7 @@ jobs:
           packages: platform-tools
       - name: Install Android toolchain
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      # One key across every staging build, so a handset can be updated in
-      # place. Without it each runner generates its own throwaway debug key and
-      # the field pays an uninstall per round. The keystore arrives as base64
-      # because a secret is text, and is written to RUNNER_TEMP rather than the
-      # workspace so no packaging step can pick it up.
+      # A persistent staging key preserves install-over continuity. Keep it in RUNNER_TEMP.
       - name: Restore the staging signing key
         id: staging_key
         env:
@@ -142,16 +138,7 @@ jobs:
           fi
           printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/staging.jks"
           echo "path=${RUNNER_TEMP}/staging.jks" >> "$GITHUB_OUTPUT"
-      # Which signer a staging build will trust, read off the key about to sign
-      # it. Without it APPROVED_UPDATE_SIGNER_SHA256 is the empty string its
-      # default provides, and UpdateVerifier refuses every update on a length
-      # check -- after the whole APK has been downloaded, reported as the
-      # artifact's identity being wrong.
-      #
-      # Derived rather than configured: a repository variable would be a second
-      # copy of a fact the keystore already carries, and the drift between them
-      # would surface only as a handset refusing an update. The password goes in
-      # on stdin because a command line is visible in the process list.
+      # Derive the trusted digest from the signing key; pass the password on stdin.
       - name: Read the signer this build will trust
         id: approved_signer
         if: steps.staging_key.outputs.path != ''
@@ -199,9 +186,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs staging-artifact/am2-admin-staging-debug.apk > staging-artifact/signer-metadata.txt
           stat --printf='byte_size=%s\n' staging-artifact/am2-admin-staging-debug.apk > staging-artifact/build-metadata.txt
           printf 'source_commit=%s\nenvironment=staging\nvariant=StagingDebug\napi_range=24+\n' "$GITHUB_SHA" >> staging-artifact/build-metadata.txt
-          # keytool read the key; apksigner reads the artifact. A build that
-          # trusts a signer other than its own fails here rather than weeks
-          # later on a handset, silently.
+          # The embedded trusted signer must match the artifact signer.
           EXPECTED="${{ steps.approved_signer.outputs.digest }}"
           if [ -n "$EXPECTED" ]; then
             SIGNED_BY=$(sed -n 's/.*certificate SHA-256 digest: *\([0-9a-fA-F]\{64\}\).*/\1/p' \
@@ -291,8 +276,6 @@ jobs:
       - name: Record artifact identity
         shell: bash
         env:
-          # In scope here as well as in the build: this step compares what was
-          # declared against what apksigner reports actually signed.
           AM2_APPROVED_SIGNER_SHA256: ${{ vars.AM2_APPROVED_SIGNER_SHA256 }}
         run: |
           set -euo pipefail
@@ -303,19 +286,11 @@ jobs:
           sha256sum release-artifact/am2-admin-production.apk > release-artifact/am2-admin-production.apk.sha256
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-artifact/am2-admin-production.apk > release-artifact/apk-badging.txt
           stat --printf='byte_size=%s\n' release-artifact/am2-admin-production.apk > release-artifact/build-metadata.txt
-          # Stop the lane when signature verification fails.
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
             release-artifact/am2-admin-production.apk > release-artifact/signer-metadata.txt
           printf 'signed=true\n' >> release-artifact/signer-metadata.txt
           printf 'source_commit=%s\nenvironment=production\n' "$GITHUB_SHA" >> release-artifact/build-metadata.txt
-          # The declared signer against the one that actually signed.
-          #
-          # The check above this lane is a shape check: sixty-four hex
-          # characters. A value of the right shape and the wrong content passes
-          # it, gets compiled into the APK, and every handset carrying that
-          # build then refuses every update it will ever be offered -- repairable
-          # only by a manual install on each unit, which is the cost this channel
-          # exists to avoid. apksigner already read the truth two lines up.
+          # Signer continuity is mandatory for install-over and future updates.
           SIGNED_BY=$(sed -n 's/.*certificate SHA-256 digest: *\([0-9a-fA-F]\{64\}\).*/\1/p' \
             release-artifact/signer-metadata.txt | head -1 | tr 'A-F' 'a-f')
           DECLARED=$(printf '%s' "$AM2_APPROVED_SIGNER_SHA256" | tr -d ':' | tr 'A-F' 'a-f')

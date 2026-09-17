@@ -193,7 +193,6 @@ dependencies {
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
 
 val checkLogPolicy by tasks.registering(Exec::class) {
