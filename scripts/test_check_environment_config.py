@@ -102,6 +102,7 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn('KERNEL=="kvm", GROUP="kvm", MODE="0666"', text)
         self.assertIn("disable-linux-hw-accel: false", text)
         self.assertIn("disable-animations: false", text)
+        self.assertIn("emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none", text)
         self.assertIn('script: sh scripts/run_emulator_compatibility.sh "com.am2.admin.dev"', text)
         self.assertTrue(helper.is_file())
         helper_text = helper.read_text()

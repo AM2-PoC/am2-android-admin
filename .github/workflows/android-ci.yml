@@ -103,6 +103,7 @@ jobs:
           target: default
           disable-animations: false
           disable-linux-hw-accel: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           emulator-boot-timeout: 900
           script: sh scripts/run_emulator_compatibility.sh "com.am2.admin.dev"
 
