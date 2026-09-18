@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GRADLE = ROOT / "app/build.gradle.kts"
+CATALOG = ROOT / "gradle/libs.versions.toml"
 WORKFLOW = ROOT / ".github/workflows/android-ci.yml"
 
 
@@ -103,6 +104,9 @@ class EnvironmentConfigTest(unittest.TestCase):
         self.assertIn("disable-linux-hw-accel: false", text)
         self.assertIn("disable-animations: false", text)
         self.assertIn('script: sh scripts/run_emulator_compatibility.sh "com.am2.admin.dev"', text)
+        self.assertIn("androidx.test.runner.AndroidJUnitRunner", GRADLE.read_text())
+        self.assertIn('androidTestImplementation("androidx.test:runner:1.6.1")', GRADLE.read_text())
+        self.assertNotIn("espressoCore", CATALOG.read_text())
         self.assertTrue(helper.is_file())
         helper_text = helper.read_text()
         self.assertIn("sys.boot_completed", helper_text)
