@@ -193,7 +193,7 @@ dependencies {
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation("androidx.test:runner:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.7.0")
 }
 
 val checkLogPolicy by tasks.registering(Exec::class) {
